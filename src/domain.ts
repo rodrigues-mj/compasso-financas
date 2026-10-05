@@ -91,6 +91,14 @@ export const stateSchema = z.object({
 export const personalAmount = (e: Entry) => e.allocations.filter(a => !a.contactId).reduce((sum, a) => sum + a.amount, 0);
 export const thirdAmount = (e: Entry) => e.amount - personalAmount(e);
 export const effectiveStatus = (e: Entry, date = today()) => e.status === 'pending' && e.dueDate && e.dueDate < date ? 'overdue' : e.status;
+export function alertGroups(state: State, date = today()) {
+  const upcoming = state.entries.filter(e => !e.cardId && e.status === 'pending' && (e.dueDate || e.date) <= shiftDays(date, 7));
+  return {
+    bills: upcoming.filter(e => e.kind === 'expense'),
+    incomes: upcoming.filter(e => e.kind === 'income'),
+    invoices: invoices(state).filter(i => i.remaining > 0 && i.dueDate <= shiftDays(date, 7))
+  };
+}
 export function thirdDebt(state: State, entryId: string, contactId: string): number {
   const e = state.entries.find(e => e.id === entryId); if (!e || e.status === 'cancelled') return 0;
   const original = e.allocations.filter(a => a.contactId === contactId).reduce((s, a) => s + a.amount, 0);
