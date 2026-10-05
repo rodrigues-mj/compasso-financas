@@ -9,6 +9,38 @@ function fixture() {
   const entry = (kind: D.Entry['kind'], amount: number, extra: Partial<D.Entry> = {}): D.Entry => ({ id: D.id(), kind, amount, description: 'Teste', date: '2026-10-01', month: '2026-10', status: 'done', paidDate: '2026-10-01', paymentMethod: 'Pix', bankId: bank.id, notes: '', allocations: [{ categoryId: s.categories.find(c => c.kind === (kind === 'income' ? 'income' : 'expense'))!.id, amount }], createdBy: user, updatedAt: '2026-10-01T12:00:00Z', ...extra });
   return { s, card, contact, entry };
 }
+describe('Compras em andamento', () => {
+  it('registra apenas 3 a 6, com valores pessoais e de terceiros nas faturas corretas', () => {
+    const { s, card, contact, entry } = fixture();
+    const categoryId = s.categories[0].id;
+    const state = D.createPurchase(s, entry('expense', 40000, { cardId: card.id, allocations: [{ categoryId, amount: 30000 }, { categoryId, amount: 10000, contactId: contact.id }] }), 6, '2026-10', 3);
+    expect(state.entries.map(e => [e.installment, e.installmentCount, e.month, e.amount])).toEqual([[3, 6, '2026-10', 10000], [4, 6, '2026-11', 10000], [5, 6, '2026-12', 10000], [6, 6, '2027-01', 10000]]);
+    expect(state.entries.reduce((sum, e) => sum + D.personalAmount(e), 0)).toBe(30000);
+    expect(D.monthly(state, '2026-09').expenses).toHaveLength(0);
+    expect(D.invoice(state, card.id, '2026-10').total).toBe(10000);
+    const paid = D.payInvoice(state, { id: D.id(), cardId: card.id, month: '2026-10', date: '2026-10-28', amount: 10000 }, 0);
+    expect(D.monthly(paid, '2026-10').balance).toBe(D.monthly(state, '2026-10').balance);
+    expect(D.validateState(JSON.parse(JSON.stringify(paid))).entries.map(e => e.installment)).toEqual([3, 4, 5, 6]);
+  });
+  it('preserva centavos e divisões ao gerar somente as parcelas restantes', () => {
+    const { s, card, contact, entry } = fixture();
+    const categoryId = s.categories[0].id;
+    const state = D.createPurchase(s, entry('expense', 10000, { cardId: card.id, allocations: [{ categoryId, amount: 6667 }, { categoryId, amount: 3333, contactId: contact.id }] }), 6, '2026-10', 4);
+    expect(state.entries.map(e => e.amount)).toEqual([3334, 3333, 3333]);
+    expect(state.entries.map(e => e.installment)).toEqual([4, 5, 6]);
+    expect(state.entries.reduce((sum, e) => sum + D.personalAmount(e), 0)).toBe(6667);
+    for (const e of state.entries) expect(e.allocations.reduce((sum, a) => sum + a.amount, 0)).toBe(e.amount);
+    const last = D.createPurchase(s, entry('expense', 5000, { cardId: card.id }), 6, '2026-10', 6);
+    expect(last.entries.map(e => [e.installment, e.amount])).toEqual([[6, 5000]]);
+  });
+  it('recusa parcela inicial inválida e mantém o cadastro de novas compras', () => {
+    const { s, card, entry } = fixture();
+    const template = entry('expense', 10000, { cardId: card.id });
+    for (const start of [0, 7, 2.5]) expect(() => D.createPurchase(s, template, 6, '2026-10', start)).toThrow(/parcela inicial/);
+    expect(D.createPurchase(s, template, 3, '2026-10').entries.map(e => [e.installment, e.amount])).toEqual([[1, 3334], [2, 3333], [3, 3333]]);
+  });
+});
+
 describe('Avisos por destino', () => {
   it('separa contas, receitas e faturas e exclui realizados, cancelados e vencimentos distantes', () => {
     const { s, card, entry } = fixture();

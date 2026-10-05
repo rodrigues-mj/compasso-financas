@@ -207,15 +207,17 @@ export function validateState(input: unknown): State {
   return state;
 }
 
-export function createPurchase(state: State, template: Entry, count: number, firstMonth: string): State {
+export function createPurchase(state: State, template: Entry, count: number, firstMonth: string, startInstallment = 1): State {
+  if (!Number.isInteger(count) || count < 1 || count > 120 || !Number.isInteger(startInstallment) || startInstallment < 1 || startInstallment > count) throw new Error('A parcela inicial deve estar entre 1 e o número total de parcelas.');
   if (template.allocations.reduce((s, a) => s + a.amount, 0) !== template.amount) throw new Error('A soma das divisões deve ser exatamente igual ao valor total da compra.');
   entrySchema.parse(template);
   const card = state.cards.find(c => c.id === template.cardId); if (!card || card.archived) throw new Error('Escolha um cartão ativo.');
-  const purchaseId = id(); const parts = splitCents(template.amount, count); let remaining = template.allocations.map(a => a.amount);
+  // The template contains only the amount and allocations still to be recorded.
+  const purchaseId = id(); const parts = splitCents(template.amount, count - startInstallment + 1); let remaining = template.allocations.map(a => a.amount);
   const entries = parts.map((amount, index) => {
     const allocated = proportional(amount, remaining); remaining = remaining.map((n, i) => n - allocated[i]);
     const month = addMonths(firstMonth, index);
-    return { ...template, id: id(), purchaseId, installment: index + 1, installmentCount: count, amount, month, dueDate: monthDate(month, card.dueDay), status: 'done' as Status, paidDate: undefined,
+    return { ...template, id: id(), purchaseId, installment: index + startInstallment, installmentCount: count, amount, month, dueDate: monthDate(month, card.dueDay), status: 'done' as Status, paidDate: undefined,
       allocations: template.allocations.map((a, i) => ({ ...a, amount: allocated[i] })).filter(a => a.amount > 0) };
   });
   return validateState({ ...state, entries: [...state.entries, ...entries] });
