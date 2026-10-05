@@ -9,6 +9,30 @@ function fixture() {
   const entry = (kind: D.Entry['kind'], amount: number, extra: Partial<D.Entry> = {}): D.Entry => ({ id: D.id(), kind, amount, description: 'Teste', date: '2026-10-01', month: '2026-10', status: 'done', paidDate: '2026-10-01', paymentMethod: 'Pix', bankId: bank.id, notes: '', allocations: [{ categoryId: s.categories.find(c => c.kind === (kind === 'income' ? 'income' : 'expense'))!.id, amount }], createdBy: user, updatedAt: '2026-10-01T12:00:00Z', ...extra });
   return { s, card, contact, entry };
 }
+describe('Avisos por destino', () => {
+  it('separa contas, receitas e faturas e exclui realizados, cancelados e vencimentos distantes', () => {
+    const { s, card, entry } = fixture();
+    const bill = entry('expense', 10000, { status: 'pending', paidDate: undefined, dueDate: '2026-10-28' });
+    const income = entry('income', 50000, { status: 'pending', paidDate: undefined, dueDate: '2026-10-28' });
+    s.entries = [bill, income, entry('expense', 15000, { cardId: card.id }), entry('expense', 2000, { status: 'cancelled', dueDate: '2026-10-26' }), entry('expense', 3000, { dueDate: '2026-10-26' }), entry('expense', 4000, { status: 'pending', dueDate: '2026-11-02' })];
+    const alerts = D.alertGroups(s, '2026-10-25');
+    expect(alerts.bills.map(e => e.id)).toEqual([bill.id]);
+    expect(alerts.incomes.map(e => e.id)).toEqual([income.id]);
+    expect(alerts.invoices.map(i => [i.card.id, i.remaining])).toEqual([[card.id, 15000]]);
+    s.payments = [{ id: D.id(), cardId: card.id, month: '2026-10', date: '2026-10-25', amount: 15000, uses: [] }];
+    expect(D.alertGroups(s, '2026-10-25').invoices).toHaveLength(0);
+  });
+  it('mantém contas atrasadas de outros meses e de terceiros nos avisos globais', () => {
+    const { s, contact, entry } = fixture();
+    const bill = entry('expense', 5000, { date: '2026-09-01', month: '2026-09', status: 'pending', paidDate: undefined, dueDate: '2026-09-20', allocations: [{ categoryId: s.categories[0].id, amount: 5000, contactId: contact.id }] });
+    s.entries = [bill];
+    const alerts = D.alertGroups(s, '2026-10-25');
+    expect(alerts.bills.map(e => e.id)).toEqual([bill.id]);
+    expect(D.personalAmount(alerts.bills[0])).toBe(0);
+    expect(D.effectiveStatus(alerts.bills[0], '2026-10-25')).toBe('overdue');
+  });
+});
+
 describe('Orçamento e dinheiro de terceiros', () => {
   it('soma salários e inclui despesas pendentes, sem repetir seu pagamento', () => {
     const { s, entry } = fixture(); s.entries = [entry('income', 200000), entry('income', 300000), entry('expense', 100000, { status: 'pending', paidDate: undefined })];
