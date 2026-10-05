@@ -2,6 +2,10 @@
 
 Aplicação web em português para organizar um orçamento individual ou compartilhado. Bancos são identificações dos lançamentos: não existem contas bancárias, saldos por instituição ou transferências entre contas.
 
+## Documentação para programadores
+
+O [guia técnico](docs/README.md) documenta a arquitetura, todos os módulos, os contratos financeiros, o banco, as permissões, os fluxos da interface e a manutenção. A documentação deve acompanhar as mudanças de código no mesmo pull request; o [histórico técnico](docs/historico.md) registra as atualizações.
+
 ## Histórico e atualizações
 
 O código é mantido em Git. `main` é a versão estável; cada atualização deve ocorrer em uma branch própria (`feat/`, `fix/`, `chore/` ou `docs/`) e ser apresentada em um pull request antes de sua incorporação. O arquivo `AGENTS.md` registra esse fluxo para trabalhos futuros com agentes. O GitHub Actions executa testes financeiros, testes do banco isolado e construção da aplicação em cada pull request e atualização da `main`, sem acessar os dados reais do Supabase.
