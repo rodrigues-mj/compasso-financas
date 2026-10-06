@@ -65,8 +65,24 @@ const excessiveUse=structuredClone(state); excessiveUse.payments.push({...paymen
 await assert.rejects(db.query('select public.finance_save($1,5,$2::jsonb)',[sid,JSON.stringify(excessiveUse)]),/insuficiente/);
 await db.query('select public.finance_save($1,5,$2::jsonb,true)',[sid,JSON.stringify(state)]);
 assert.equal((await db.query('select count(*) as n from public.finance_history')).rows[0].n,6);
+// A finite monthly series uses the existing document contract; all data below are fictitious.
+const seriesId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const billTemplate = { ...entry, status: 'pending', paidDate: undefined, paymentMethod: 'Boleto', date: '2025-06-09', month: '2025-06', installment: 16, installmentCount: 48 };
+const billEntries = Array.from({ length: 33 }, (_, i) => {
+  const date = new Date(Date.UTC(2026, 9 + i, 9)).toISOString().slice(0, 10);
+  return { ...billTemplate, id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, seriesId, installment: i + 16, date, month: date.slice(0, 7), dueDate: date };
+});
+const bills = { version: 1, banks: state.banks, categories: state.categories, cards: [], contacts: [], entries: billEntries, receipts: [], payments: [], returns: [], budgets: [], series: [{ id: seriesId, template: billTemplate, frequency: 'monthly', start: '2026-10-09', end: '2029-06-09', generatedUntil: '2029-06-09', archived: false }] };
+const billsId = (await db.query('select public.finance_create_space($1,$2::jsonb) as id', ['Parcelas fictícias', JSON.stringify({ ...bills, entries: [], series: [] })])).rows[0].id;
+await db.query('select public.finance_save($1,0,$2::jsonb)', [billsId, JSON.stringify(bills)]);
+const restoredBills = (await db.query('select data from public.finance_documents where space_id=$1', [billsId])).rows[0].data;
+assert.deepEqual(restoredBills, JSON.parse(JSON.stringify(bills)));
+const duplicateBill = structuredClone(bills); duplicateBill.entries.push({ ...billEntries[0], id: 'ffffffff-ffff-4fff-8fff-ffffffffffff' });
+await assert.rejects(db.query('select public.finance_save($1,1,$2::jsonb)', [billsId, JSON.stringify(duplicateBill)]), /Ocorrência duplicada/);
+const invalidBill = structuredClone(bills); invalidBill.entries[0].installment = 49;
+await assert.rejects(db.query('select public.finance_save($1,1,$2::jsonb)', [billsId, JSON.stringify(invalidBill)]), /Parcela inválida/);
 await db.query('select public.finance_set_member($1,$2,$3,false)', [sid, reader, 'reader']);
 await db.exec(`set request.jwt.claim.sub='${reader}';`);
 assert.equal((await db.query('select * from public.finance_documents')).rows.length,0);
 await db.close();
-console.log('PostgreSQL: migração, gravação atômica, conflito, RLS, convites, leitor, revogação, último administrador e validação monetária passaram.');
+console.log('PostgreSQL: migração, gravação atômica, conflito, RLS, convites, leitor, revogação, último administrador, validação monetária e persistência de boletos parcelados passaram.');

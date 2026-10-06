@@ -166,6 +166,10 @@ export function validateState(input: unknown): State {
   const collections: { id: string }[][] = [state.banks, state.categories, state.cards, state.contacts, state.entries, state.receipts, state.payments, state.returns, state.series, state.budgets];
   for (const collection of collections) if (new Set(collection.map(e => e.id)).size !== collection.length) throw new Error('Identificadores duplicados.');
   const exists = (collection: { id: string }[], key?: string) => !key || collection.some(x => x.id === key);
+  for (const s of state.series) if (s.template.installment) {
+    const t = s.template;
+    if (s.frequency !== 'monthly' || t.kind !== 'expense' || t.cardId || !t.installmentCount || t.installment! > t.installmentCount || s.end !== occurrenceDate(s.start, 'monthly', t.installmentCount - t.installment!)) throw new Error('Série de parcelas inválida. Confira a parcela inicial e o vencimento final.');
+  }
   for (const c of state.categories) { if (!exists(state.categories, c.parentId) || c.parentId === c.id) throw new Error('Categoria principal inválida.'); if (c.parentId && (state.categories.find(x => x.id === c.parentId)?.parentId || state.categories.find(x => x.id === c.parentId)?.kind !== c.kind)) throw new Error('A subcategoria deve ter o mesmo tipo da categoria principal. Use apenas dois níveis.'); }
   for (const c of state.cards) if (!exists(state.banks, c.bankId)) throw new Error('Banco do cartão não encontrado.');
   const occurrences = new Set<string>();
@@ -176,6 +180,13 @@ export function validateState(input: unknown): State {
       if (!category || category.kind !== (e.kind === 'income' ? 'income' : 'expense') || !exists(state.contacts, a.contactId)) throw new Error('Categoria ou terceiro inválido.');
     }
     if (e.seriesId) { const key = `${e.seriesId}|${e.date}`; if (occurrences.has(key)) throw new Error('Ocorrência recorrente duplicada.'); occurrences.add(key); }
+    const plan = state.series.find(s => s.id === e.seriesId && s.template.installment)?.template;
+    if (plan) {
+      if (!e.installment || e.installment < plan.installment! || e.installmentCount !== plan.installmentCount) throw new Error('Numeração da parcela incompatível com a série.');
+      const key = `${e.seriesId}|parcela:${e.installment}`;
+      if (occurrences.has(key)) throw new Error('Parcela da série duplicada.'); occurrences.add(key);
+    }
+    if (e.installment && (!e.installmentCount || e.installment > e.installmentCount)) throw new Error('Parcela inválida.');
     if (e.originalId && (!state.entries.some(x => x.id === e.originalId && x.kind === 'expense') || e.kind !== 'refund')) throw new Error('Compra do estorno inválida.');
   }
   for (const e of state.entries.filter(e => e.kind === 'expense')) {
@@ -288,14 +299,29 @@ export function occurrenceDate(start: string, frequency: Series['frequency'], in
   if (frequency === 'daily' || frequency === 'weekly') return shiftDays(start, index * (frequency === 'weekly' ? 7 : 1));
   return monthDate(addMonths(start.slice(0, 7), index * (frequency === 'yearly' ? 12 : 1)), Number(start.slice(8)));
 }
+export function billInstallmentSchedule(amount: number, count: number, start: number, dueDate: string) {
+  amountSchema.parse(amount); dateSchema.parse(dueDate);
+  if (!Number.isInteger(count) || count < 1 || count > 120 || !Number.isInteger(start) || start < 1 || start > count) throw new Error('Informe de 1 a 120 parcelas e uma parcela inicial dentro desse total.');
+  return Array.from({ length: count - start + 1 }, (_, index) => ({ installment: start + index, amount, dueDate: occurrenceDate(dueDate, 'monthly', index) }));
+}
+export function createBillInstallments(state: State, template: Entry, count: number, start: number, dueDate: string): State {
+  if (template.kind !== 'expense' || template.cardId || template.seriesId || template.purchaseId || template.status === 'cancelled') throw new Error('O parcelamento sem cartão deve começar em uma nova despesa pendente ou paga.');
+  const schedule = billInstallmentSchedule(template.amount, count, start, dueDate);
+  const series: Series = { id: id(), template: { ...template, installment: start, installmentCount: count, status: 'pending', paidDate: undefined }, frequency: 'monthly', start: dueDate, end: schedule.at(-1)!.dueDate, generatedUntil: dueDate, archived: false };
+  const next = generateSeries(state, series, series.end!);
+  // Only the selected starting installment can already be paid; future installments stay pending.
+  return validateState({ ...next, entries: next.entries.map(e => e.seriesId === series.id && e.installment === start ? { ...e, status: template.status, paidDate: template.status === 'done' ? template.paidDate : undefined } : e) });
+}
 export function generateSeries(state: State, series: Series, until: string): State {
   if (series.archived) return state;
   const entries = [...state.entries]; const end = series.end && series.end < until ? series.end : until;
   for (let i = 0; i < 10000; i++) {
     const date = occurrenceDate(series.start, series.frequency, i); if (date > end) break;
-    if (!entries.some(e => e.seriesId === series.id && e.date === date)) entries.push({ ...series.template, id: id(), date, month: date.slice(0, 7), dueDate: date, paidDate: undefined, status: 'pending', seriesId: series.id });
+    const installment = series.template.installment ? series.template.installment + i : undefined;
+    if (installment && installment > series.template.installmentCount!) break;
+    if (!entries.some(e => e.seriesId === series.id && (installment ? e.installment === installment : e.date === date))) entries.push({ ...series.template, id: id(), installment, date, month: date.slice(0, 7), dueDate: date, paidDate: undefined, status: 'pending', seriesId: series.id });
   }
-  const seriesList = [...state.series.filter(s => s.id !== series.id), { ...series, generatedUntil: until }];
+  const seriesList = [...state.series.filter(s => s.id !== series.id), { ...series, generatedUntil: series.generatedUntil > end ? series.generatedUntil : end }];
   return validateState({ ...state, entries, series: seriesList });
 }
 export function editSeries(state: State, entry: Entry, scope: 'one' | 'future' | 'all'): State {
@@ -303,7 +329,7 @@ export function editSeries(state: State, entry: Entry, scope: 'one' | 'future' |
   const series = state.series.find(s => s.id === entry.seriesId)!;
   // Preserve dates and actual payments; apply editable fields only to unpaid occurrences in the selected scope.
   const update = (e: Entry) => ({ ...e, description: entry.description, amount: entry.amount, bankId: entry.bankId, paymentMethod: entry.paymentMethod, notes: entry.notes, allocations: entry.allocations, updatedAt: entry.updatedAt });
-  return validateState({ ...state, series: state.series.map(s => s.id === series.id ? { ...s, template: update(s.template) } : s), entries: state.entries.map(e => e.seriesId === series.id && e.status === 'pending' && (scope === 'all' || e.date >= entry.date) ? update(e) : e.id === entry.id ? entry : e) });
+  return validateState({ ...state, series: state.series.map(s => s.id === series.id ? { ...s, template: update(s.template) } : s), entries: state.entries.map(e => e.id === entry.id ? entry : e.seriesId === series.id && e.status === 'pending' && (scope === 'all' || e.date >= entry.date) ? update(e) : e) });
 }
 export function categoryRoot(state: State, categoryId: string) { return state.categories.find(c => c.id === categoryId)?.parentId || categoryId; }
 export function monthly(state: State, month: string, cutoff?: number) {

@@ -4,6 +4,8 @@
 
 ## Cliente e contratos de armazenamento
 
+Parcelas sem cartão reutilizam `entries` e `series` do documento versão 1: posição/total nos campos existentes `installment/installmentCount` (também no template), série mensal com início e término explícitos. Não exigem migração, alteração de RPC, nova tabela nem atualização na nuvem. O banco continua validando centavos, divisões, vínculos, limites de parcelas e duplicidade de série/data; invariantes específicas do cronograma finito também são validadas pelo domínio local. Persistência e backups carregam a série e todas as ocorrências no mesmo snapshot atômico com revisão. O teste PostgreSQL cobre gravação/leitura dessa estrutura, ocorrência repetida e parcela acima do total, com dados fictícios isolados.
+
 `supabase` é cliente opcional criado com URL e chave pública do ambiente, persistência de sessão, detecção de sessão na URL e renovação automática de token. As funções remotas usam esse cliente com asserção de existência; o chamador deve garantir configuração e fluxo de login. `check(response)` transforma erro retornado pelo SDK em exceção com sua mensagem.
 
 `Space = { id, name }`; `Snapshot = { data: State, revision: number }`. `DEMO_USER` e `demoMember` representam um administrador fictício, sem autenticação real.

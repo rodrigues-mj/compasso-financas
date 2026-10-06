@@ -21,6 +21,61 @@ describe('Primeira fatura original e parcela atual', () => {
   });
 });
 const user = '11111111-1111-4111-8111-111111111111';
+describe('Parcelamento sem cartão', () => {
+  it('cadastra de 16/48 até 48/48, sem histórico anterior, com competência no vencimento e persistência JSON', () => {
+    const { s, entry } = fixture();
+    const template = entry('expense', 10001, { date: '2025-06-09', month: '2025-06', status: 'pending', paidDate: undefined, paymentMethod: 'Boleto' });
+    const saved = D.createBillInstallments(s, template, 48, 16, '2026-10-09');
+    expect(saved.entries).toHaveLength(33);
+    expect(saved.entries.map(e => e.installment)).toEqual(Array.from({ length: 33 }, (_, i) => i + 16));
+    expect(saved.entries.every(e => e.amount === 10001 && e.status === 'pending' && !e.cardId && !e.purchaseId)).toBe(true);
+    expect(saved.entries.at(-1)!.dueDate).toBe('2029-06-09');
+    expect(saved.series[0].template.date).toBe('2025-06-09');
+    expect(D.monthly(saved, '2025-06').spent).toBe(0);
+    expect(D.monthly(saved, '2026-10').spent).toBe(10001);
+    expect(D.invoices(saved)).toHaveLength(0);
+    const restored = D.validateState(JSON.parse(JSON.stringify(saved)));
+    expect(restored).toEqual(saved);
+    expect(D.generateSeries(restored, restored.series[0], '2035-01-01').entries).toEqual(saved.entries);
+  });
+  it('mantém âncora de vencimento 31, valor por parcela e fim automático', () => {
+    const schedule = D.billInstallmentSchedule(10001, 4, 2, '2028-01-31');
+    expect(schedule.map(p => p.dueDate)).toEqual(['2028-01-31', '2028-02-29', '2028-03-31']);
+    expect(schedule.reduce((s, p) => s + p.amount, 0)).toBe(30003);
+    expect(D.billInstallmentSchedule(100, 48, 48, '2026-10-09')).toHaveLength(1);
+    expect(() => D.billInstallmentSchedule(100, 48, 49, '2026-10-09')).toThrow();
+    expect(() => D.billInstallmentSchedule(100, 1.5, 1, '2026-10-09')).toThrow();
+    expect(() => D.billInstallmentSchedule(100, 121, 1, '2026-10-09')).toThrow();
+    expect(() => D.billInstallmentSchedule(100, 4, 2, '2026-02-30')).toThrow();
+  });
+  it('paga somente a parcela inicial e não duplica consumo; terceiros permanecem separados', () => {
+    const { s, entry, contact } = fixture();
+    const template = entry('expense', 10000);
+    template.allocations = [{ categoryId: template.allocations[0].categoryId, amount: 6000 }, { categoryId: template.allocations[0].categoryId, contactId: contact.id, amount: 4000 }];
+    const saved = D.createBillInstallments(s, template, 48, 16, '2026-10-09');
+    expect(saved.entries.filter(e => e.status === 'done')).toHaveLength(1);
+    expect(saved.entries[0].paidDate).toBe(template.paidDate);
+    expect(D.monthly(saved, '2026-10').spent).toBe(6000);
+    expect(D.reportRows(saved, 'cash').reduce((sum, r) => sum + r.amount, 0)).toBe(6000);
+    expect(D.thirds(saved).outstanding).toBe(33 * 4000);
+    expect(D.reportRows(saved, 'consumption').filter(r => r.date.startsWith('2026-10')).reduce((sum, r) => sum + r.amount, 0)).toBe(6000);
+  });
+  it('edita uma ou as próximas, preservando pagas e a numeração; pagamento com escopo futuro se realiza', () => {
+    const { s, entry } = fixture();
+    let saved = D.createBillInstallments(s, entry('expense', 10000), 20, 16, '2026-10-09');
+    const first = saved.entries[0]; const second = saved.entries[1];
+    saved = D.editSeries(saved, { ...second, description: 'Parcela ajustada', status: 'done', paidDate: '2026-11-09' }, 'future');
+    expect(saved.entries[0]).toEqual(first);
+    expect(saved.entries[1].status).toBe('done');
+    expect(saved.entries.slice(2).every(e => e.description === 'Parcela ajustada' && e.status === 'pending')).toBe(true);
+    const third = saved.entries[2];
+    const edited = D.editSeries(saved, { ...third, amount: 11000, allocations: [{ ...third.allocations[0], amount: 11000 }] }, 'one');
+    expect(edited.entries[2].amount).toBe(11000);
+    expect(edited.entries[3].amount).toBe(10000);
+    expect(edited.entries.map(e => e.installment)).toEqual([16, 17, 18, 19, 20]);
+    expect(D.effectiveStatus({ ...third, dueDate: '2000-01-01' })).toBe('overdue');
+  });
+});
 function fixture() {
   const s = D.emptyState(); s.categories = D.suggestedCategories();
   const bank = { id: D.id(), name: 'Banco', color: '#356f62', archived: false }; s.banks.push(bank);
