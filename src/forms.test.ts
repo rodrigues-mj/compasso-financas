@@ -16,6 +16,19 @@ function setup() {
   return { state, template, render };
 }
 describe('Formulário de parcelamento', () => {
+  it('oferece parcelas sem cartão e reabre uma parcela com valor individual e identificação da série', () => {
+    const { state, template } = setup();
+    const props = { members: [], userId, defaultMonth: '2026-10', busy: false, commit: async () => {}, cancel: () => {} };
+    const html = renderToStaticMarkup(createElement(EntryForm, { ...props, state }));
+    expect(html).toContain('Despesa parcelada sem cartão');
+    const saved = D.createBillInstallments(state, { ...template, cardId: undefined, paymentMethod: 'Boleto', status: 'pending' }, 48, 16, '2026-10-09');
+    const edited = renderToStaticMarkup(createElement(EntryForm, { ...props, state: saved, entry: saved.entries[0] }));
+    expect(edited).toContain('Parcela 16/48');
+    expect(edited).toContain('09/06/2029');
+    expect(edited).toContain('value="100,01"');
+    expect(edited).toContain('Esta e as próximas pendentes');
+    expect(edited).not.toContain('Valor total original da compra');
+  });
   it('permite escolher primeira fatura histórica e recupera o mês original ao editar', () => {
     const { state, template, render } = setup();
     expect(render(state)).not.toContain(`min="${D.currentMonth()}"`);

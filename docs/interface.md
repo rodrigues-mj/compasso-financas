@@ -2,6 +2,14 @@
 
 [Índice](README.md) · [App](../src/App.tsx) · [páginas](../src/pages.tsx) · [formulários](../src/forms.tsx) · [componentes](../src/components.tsx)
 
+## Parcelamento de boletos e financiamentos
+
+Em uma nova despesa sem cartão, `EntryForm` oferece **Despesa parcelada sem cartão (boleto, carnê ou financiamento)**. Ao ativar, status inicial fica pendente e recorrência comum é desativada. O valor passa a ser de cada parcela; informe total original, parcela inicial e próximo vencimento obrigatório. A data do contrato fica como referência. A prévia mostra quantidade restante, total previsto, numeração e último vencimento, com lista expandível. Só a primeira cadastrada pode ser marcada paga; as próximas permanecem pendentes.
+
+Ao editar, o formulário reabre apenas o valor da ocorrência, com sua numeração, término e data de referência. É possível alterar somente a ocorrência, esta e as próximas pendentes ou a série pendente, preservando as demais pagas. A conversão de recorrência/parcelamento em cartão é bloqueada. Pagamento via `SettleForm` conserva o previsto, a numeração e o vínculo; não cria outro lançamento.
+
+Listas e detalhes mostram a posição da parcela; calendário e CSV também incluem `n/total`. Filtros mensais continuam limitando a exibição ao período escolhido. O resumo de recorrências identifica o intervalo cadastrado e **Todas as parcelas geradas**; esse texto não significa que os boletos foram pagos. A geração adicional fica desabilitada quando o término já foi atingido. Pausar geração não cancela ocorrências já existentes.
+
 ## Coordenação em App.tsx
 
 `App` centraliza sessão, prontidão, modo fictício, lista/seleção de espaços, participantes, snapshot, carregamento, página, mês e diálogo. Também controla gravação em andamento, mensagens, aviso de alteração remota, menu móvel e recuperação de senha. `NAV`, `Page` e `titles` associam as dez opções de navegação; `Dialog` é união discriminada que determina formulário e argumentos do modal.

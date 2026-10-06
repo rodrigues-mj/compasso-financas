@@ -2,6 +2,12 @@
 
 [Índice](README.md)
 
+## 06/10/2026 — parcelamento mensal sem cartão
+
+Adicionado cadastro único de boletos, carnês e financiamentos com valor por parcela, quantidade original, parcela inicial e próximo vencimento. Gera somente as restantes até o término, mantém a data original no template e registra competência por vencimento. A inicial pode estar paga; futuras ficam pendentes. Edição usa escopos da série e conserva demais pagamentos, numeração e valores previstos. Corrigida a substituição da ocorrência selecionada ao realizá-la junto à edição das próximas. Calendário/CSV identificam a parcela; resumo não oferece geração além do fim.
+
+Validação: 37 testes de domínio/formulário; teste PostgreSQL com gravação/leitura de série finita, duplicidade e numeração inválida; construção TypeScript/Vite. Cobertos início 16/48, 33 ocorrências, fim automático, arredondamento de datas, valor individual em centavos, pagamentos sem consumo duplicado, terceiros separados, edição e revalidação JSON. Sem migração ou dados reais alterados. Documentação de domínio, interface e banco atualizada; arquitetura de persistência, permissões e comandos permanecem compatíveis.
+
 ## 05/10/2026 — documentação técnica inicial
 
 Código de referência: `61c169b9f2cfbf73d546f4b01c9fc9e24900128f`.

@@ -103,11 +103,21 @@ Uma compra de 15.000, com 10.000 pessoais e 5.000 de terceiro, consome 10.000 do
 
 `removeEntry(state, entryId)` não altera estado se ID inexistente. Bloqueia exclusão com recebimentos, estornos relacionados ou pagamento da fatura do mesmo cartão/mês. Exclusão da compra inteira no `App` executa essa verificação em todas as parcelas e só grava após terminar.
 
-`occurrenceDate(start, frequency, index)` desloca dias, semanas, meses ou anos, ajustando dias inexistentes. `generateSeries(state, series, until)` retorna estado atual se arquivada; cria ocorrências pendentes sem duplicar série/data, até menor data entre término e horizonte. Há limite interno de 10.000 iterações; `generatedUntil` registra o horizonte solicitado. Não há serviço agendado: a geração é acionada na interface.
+`occurrenceDate(start, frequency, index)` desloca dias, semanas, meses ou anos, ajustando dias inexistentes. `generateSeries(state, series, until)` retorna estado atual se arquivada; cria ocorrências pendentes sem duplicar série/data, até menor data entre término e horizonte. Há limite interno de 10.000 iterações; `generatedUntil` registra a maior data já gerada, limitada pelo término quando houver. Não há serviço agendado: a geração é acionada na interface.
 
 `editSeries(state, entry, scope)` altera uma ocorrência em `one`; nos escopos `future/all`, atualiza template e ocorrências pendentes abrangidas, preservando datas e campos realizados das demais. A entrada selecionada é substituída conforme o argumento. Campos propagados: descrição, valor, banco, forma de pagamento, observações, divisões e atualização. Excluir uma ocorrência permite regenerá-la; cancelar conserva a chave e exclui seus valores dos totais.
 
 ## Indicadores e relatórios
+
+### Parcelas mensais sem cartão
+
+`billInstallmentSchedule(amount, count, start, dueDate)` recebe o valor **de cada parcela** em centavos, total original (1–120), parcela inicial e próximo vencimento. Retorna somente `start..count`, com o mesmo valor e vencimentos mensais ancorados no dia inicial (31 → último dia de fevereiro → 31 de março). Não divide um preço total.
+
+`createBillInstallments(state, template, count, start, dueDate)` cria uma nova despesa sem cartão como série mensal finita. O template conserva a data original como referência; `Series.start` é o próximo vencimento e `end` é o último. `template.installment/installmentCount` definem numeração e término usando campos existentes. Todas as parcelas restantes são geradas atomicamente; as anteriores não são reconstruídas. Só a inicial pode vir realizada, com data de pagamento; as demais ficam pendentes. Não cria `purchaseId`, cartão, fatura, receita ou pagamento adicional.
+
+Cada ocorrência tem `date`, `month` e `dueDate` do vencimento previsto, portanto aparece no orçamento/consumo do mês correspondente. Realização mantém o mesmo ID; valor efetivamente pago pode diferir e `plannedAmount` preserva o previsto. Fluxo de caixa usa `paidDate`; o orçamento considera a parcela uma única vez. Divisões são valores de cada parcela, inclusive terceiros, sempre fora dos totais pessoais.
+
+`generateSeries` limita a numeração ao total e evita repetição também por série/parcela, mesmo se uma ocorrência tiver sua data editada. `validateState` valida término, frequência mensal, numeração e unicidade dessas séries. `editSeries` mantém as demais pagas, numeração e datas; substitui a selecionada inclusive quando ela passa de pendente a paga em escopo `future/all`. No parcelamento finito, todas as ocorrências já existem, então editar próximas não exige gerar novos meses. Excluir remove apenas a ocorrência; cancelar preserva a chave. Não há antecipação automática, cálculo de juros nem alteração em lote dos vencimentos.
 
 `monthly(state, month, cutoff?)` retorna `income`, `projected`, `spent`, `balance`, `projectedBalance`, `expenses` e `categoryTotals` (Map). Receita realizada considera `paidDate`; projetada considera competência de receitas pendentes. Consumo considera despesas/estornos não cancelados em `month`, somente parcelas pessoais. No recorte por dia, cartão usa vencimento (ou data) e lançamento direto usa data do lançamento. Categorias são agrupadas na principal.
 
