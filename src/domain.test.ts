@@ -83,6 +83,18 @@ describe('Compras em andamento', () => {
 });
 
 describe('Avisos por destino', () => {
+  it('conta só as faturas em alerta do mês escolhido e mantém o sino global', () => {
+    const { s, card, entry } = fixture();
+    card.dueDay = 9;
+    s.entries = ['2026-08', '2026-09', '2026-10', '2026-11'].map(month => entry('expense', 10000, { cardId: card.id, month }));
+    expect(D.alertGroups(s, '2026-10-06').invoices.map(i => i.month)).toEqual(['2026-08', '2026-09', '2026-10']);
+    expect(D.alertGroups(s, '2026-10-06', '2026-10').invoices.map(i => i.month)).toEqual(['2026-10']);
+    expect(D.alertGroups(s, '2026-10-06', '2026-09').invoices.map(i => i.month)).toEqual(['2026-09']);
+    expect(D.alertGroups(s, '2026-10-06', '2026-11').invoices).toHaveLength(0);
+    const paid = D.payInvoice(s, { id: D.id(), cardId: card.id, month: '2026-10', date: '2026-10-06', amount: 10000 }, 0);
+    expect(D.alertGroups(paid, '2026-10-06', '2026-10').invoices).toHaveLength(0);
+    expect(D.alertGroups(paid, '2026-10-06').invoices).toHaveLength(2);
+  });
   it('separa contas, receitas e faturas e exclui realizados, cancelados e vencimentos distantes', () => {
     const { s, card, entry } = fixture();
     const bill = entry('expense', 10000, { status: 'pending', paidDate: undefined, dueDate: '2026-10-28' });

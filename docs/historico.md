@@ -25,3 +25,9 @@ Validação: 24 testes de domínio/formulário, teste PostgreSQL local e build a
 Cartões e faturas passa a mostrar somente faturas e pagamentos do mês selecionado, mantendo parcelas previstas para projeções. Cadastro novo não sugere nem aceita fatura inicial de mês passado; compras antigas preservam a data original e começam na competência atual ou futura. Escolha manual de fatura não é sobrescrita pela data/cartão; edição conserva histórico. Documentação de interface e domínio atualizada; esquema, RPCs e persistência não mudaram, sem migração ou exclusão de dados reais.
 
 Validação: 28 testes locais de domínio/formulário e teste PostgreSQL passaram. Construção TypeScript/Vite passou. Regressões cobrem troca de mês, parcelas previstas preservadas, data antiga, limite do novo cadastro, edição histórica e fechamento. Publicação em produção depende de aprovação.
+
+## 06/10/2026 — contador de faturas do mês
+
+Menu Cartões e faturas passa a contar apenas faturas em alerta do mês selecionado, mantendo o sino global. Atualizados domínio e interface. Sem alteração de esquema, RPC, permissões, armazenamento ou regras financeiras; nenhum dado real modificado.
+
+Validação local: 29 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressão verifica três alertas globais contra um de outubro, mudança de competência, fatura futura fora da janela e pagamento que elimina o aviso do mês. Links locais conferidos. Publicação em produção aguarda aprovação.
