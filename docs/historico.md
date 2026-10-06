@@ -43,3 +43,9 @@ Validação local: 29 testes de domínio/formulário, PostgreSQL e construção 
 Corrigido estado silencioso dos botões de recebimento quando A receber é zero. Atalhos abrem guia com ações de cadastrar pessoa e vincular compra existente/nova; havendo obrigação, abrem formulário normal. Leitores permanecem sem escrita. Documentação de interface atualizada; domínio, regras financeiras, banco, permissões, persistência, arquitetura e comandos seguem compatíveis. Sem migração ou alteração de dados reais.
 
 Validação local: 31 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressões verificam atalhos habilitados no painel e Valores a receber com saldo zero, restrições para leitor e guia sem formulário de gravação, com caminho para compra existente. Links locais conferidos. Publicação aguarda aprovação.
+
+## 06/10/2026 — detalhes de indicadores pessoais
+
+Corrigidas listas de composição do saldo e gastos pessoais que mostravam valores integrais de compras de terceiros, apesar de os totais já excluírem esses valores. Escopo de parte/categoria acompanha o diálogo; compras só de terceiros são omitidas e compras mistas mostram somente a parte escolhida. Categorias e orçamentos restringem também as divisões à categoria raiz; indicadores de contas a pagar preservam sua perspectiva. Faturas e consultas totais continuam mostrando obrigações completas. Sem alteração de dados reais, cálculos financeiros ou banco. Revisada interface; domínio, arquitetura de persistência, permissões e comandos continuam corretos.
+
+Validação local: 32 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressão verifica exclusão de compra externa, parte pessoal de compra mista, restrição de categoria, consulta total preservada e estado financeiro intacto. Links locais conferidos. Publicação aguarda aprovação.
