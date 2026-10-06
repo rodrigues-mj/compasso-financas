@@ -10,4 +10,4 @@
 - Migrações já aplicadas não devem ser reescritas: criar uma nova migração numerada. Alterações na nuvem precisam respeitar o escopo autorizado.
 - Valores monetários permanecem em centavos. Dinheiro de terceiros nunca entra nas receitas pessoais ou no saldo do orçamento. Pagamentos não duplicam consumo.
 - GitHub armazena código. Supabase armazena os dados financeiros; dados reais não devem ser colocados em issues, commits ou pull requests.
-
+- Manter a documentação técnica em docs/ atualizada no mesmo conjunto de mudanças do código: revisar arquitetura, contratos, regras financeiras, banco, permissões, interface e comandos afetados; conferir links e registrar a mudança e a validação em docs/historico.md. O README deve apontar para docs/README.md. Explicações no chat ou no pull request não substituem a documentação versionada. Quando nenhuma seção exigir alteração, justificar no pull request por que o guia permanece correto.
