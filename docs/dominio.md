@@ -58,7 +58,7 @@ Participantes possuem login e função no espaço. Contatos são terceiros sem a
 | `proportional(total, weights)` | Calcula proporções inteiras com BigInt; distribui restos pela maior fração, desempate pelo índice. Soma dos pesos zero retorna zeros. Pressupõe inteiros não negativos. |
 | `personalAmount(entry)`, `thirdAmount(entry)` | Soma sem contato externo; restante do total, respectivamente. |
 | `effectiveStatus(entry, date?)` | Retorna `overdue` para pendente com vencimento anterior à data; demais mantêm status. |
-| `alertGroups(state, date?)` | Contas e receitas diretas pendentes até sete dias à frente, incluindo atrasadas; faturas com restante positivo na mesma janela. Considera todos os meses. |
+| `alertGroups(state, date?, invoiceMonth?)` | Contas e receitas diretas pendentes até sete dias à frente, incluindo atrasadas; faturas com restante positivo na mesma janela. Sem `invoiceMonth`, considera todos os meses. Quando informado, restringe somente as faturas à competência escolhida; contas e receitas mantêm seu alcance global. |
 | `categoryRoot(state, categoryId)` | ID do pai, se existente, ou da própria categoria. |
 | `variation(before, after)` | `(after-before)/abs(before)*100`; base zero retorna `null`. |
 | `csv(rows)` | BOM UTF-8, separador `;`, CRLF, campos entre aspas, escape de aspas e prefixo seguro para textos que podem executar fórmula. Todo número é tratado como centavos e convertido com vírgula decimal; passar contagens como texto. |
