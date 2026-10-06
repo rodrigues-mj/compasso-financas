@@ -15,12 +15,13 @@ function setup() {
   return { state, template, render };
 }
 describe('Formulário de parcelamento', () => {
-  it('limita novos cadastros ao mês atual e preserva a fatura histórica ao editar', () => {
+  it('permite escolher primeira fatura histórica e recupera o mês original ao editar', () => {
     const { state, template, render } = setup();
-    expect(render(state)).toContain(`min="${D.currentMonth()}"`);
+    expect(render(state)).not.toContain(`min="${D.currentMonth()}"`);
+    expect(render(state)).toContain('Primeira fatura original');
     const saved = D.createPurchaseFromOriginal(state, template, 6, '2026-08', 3);
     const html = render(saved, saved.entries[0]);
-    expect(html).toContain('value="2026-08"');
+    expect(html).toContain('value="2026-06"');
     expect(html).not.toContain(`min="${D.currentMonth()}"`);
   });
   it('pede o total original e informa como visualizar as faturas', () => {

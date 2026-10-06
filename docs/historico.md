@@ -31,3 +31,9 @@ Validação: 28 testes locais de domínio/formulário e teste PostgreSQL passara
 Menu Cartões e faturas passa a contar apenas faturas em alerta do mês selecionado, mantendo o sino global. Atualizados domínio e interface. Sem alteração de esquema, RPC, permissões, armazenamento ou regras financeiras; nenhum dado real modificado.
 
 Validação local: 29 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressão verifica três alertas globais contra um de outubro, mudança de competência, fatura futura fora da janela e pagamento que elimina o aviso do mês. Links locais conferidos. Publicação em produção aguarda aprovação.
+
+## 06/10/2026 — primeira fatura original e parcela atual
+
+Corrigido bloqueio que impedia escolher a primeira fatura original no passado. O formulário usa esse mês como referência da parcela 1 e omite competências anteriores em novos cadastros, preservando a numeração original. Exemplo fictício: primeira fatura setembro, três parcelas e cadastro em outubro gera 2/3 outubro e 3/3 novembro. Edição reconstrói a referência original sem alterar histórico automaticamente. Revisados domínio e interface; contratos de persistência, banco, permissões, arquitetura e comandos permanecem compatíveis, sem migração.
+
+Validação local: 29 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressão usa R$ 289, compra de agosto e primeira fatura setembro para gerar 2/3 outubro e 3/3 novembro, sem gasto em setembro; inclui recuperação da referência original na edição, virada de ano e manutenção da escolha de parcela posterior. Links locais conferidos. Produção aguarda aprovação.
