@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { EntryForm, ReceiptGuide } from './forms';
 import { Cards, Dashboard, Thirds, type PageProps } from './pages';
 import * as D from './domain';
+import { EntryTable } from './components';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 function setup() {
@@ -98,5 +99,33 @@ describe('Atalhos de recebimento de terceiros', () => {
     expect(html).toContain('Registrar nova compra');
     expect(html).toContain('evitar duplicá-lo');
     expect(html).not.toContain('<form');
+  });
+});
+
+describe('Detalhes dos valores pessoais', () => {
+  it('exclui compra só de terceiro e mostra apenas a parte pessoal das compras mistas', () => {
+    const { state, template } = setup();
+    const contactId = D.id();
+    state.contacts.push({ id: contactId, name: 'Pessoa externa de exemplo', archived: false, color: '#123456' });
+    const personalCategory = state.categories[0].id;
+    const otherCategory = state.categories[1].id;
+    const personal = { ...template, id: D.id(), description: 'Compra pessoal de exemplo', amount: 10000, allocations: [{ categoryId: personalCategory, amount: 10000 }] };
+    const third = { ...template, id: D.id(), description: 'Compra externa de exemplo', amount: 15300, allocations: [{ categoryId: personalCategory, amount: 15300, contactId }] };
+    const mixed = { ...template, id: D.id(), description: 'Compra mista de exemplo', amount: 30000, allocations: [{ categoryId: personalCategory, amount: 8000 }, { categoryId: otherCategory, amount: 12000 }, { categoryId: personalCategory, amount: 10000, contactId }] };
+    state.entries = [personal, third, mixed];
+    const render = (portion: 'all' | 'personal' | 'third', categoryId?: string) => renderToStaticMarkup(createElement(EntryTable, { entries: state.entries, state, members: [], onSelect: () => {}, portion, categoryId }));
+    const personalHtml = render('personal');
+    expect(personalHtml).not.toContain(third.description);
+    expect(personalHtml).not.toContain('Pessoa externa de exemplo');
+    expect(personalHtml).toContain(D.money(20000));
+    expect(personalHtml).not.toContain(D.money(30000));
+    const categoryHtml = render('personal', personalCategory);
+    expect(categoryHtml).toContain(D.money(8000));
+    expect(categoryHtml).not.toContain(D.money(20000));
+    expect(render('all')).toContain(third.description);
+    expect(render('all')).toContain(D.money(30000));
+    expect(render('third')).not.toContain(personal.description);
+    expect(D.monthly(state, '2026-10').spent).toBe(30000);
+    expect(state.entries[2].amount).toBe(30000);
   });
 });

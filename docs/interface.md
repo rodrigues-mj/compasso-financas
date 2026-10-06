@@ -23,7 +23,7 @@ A cada 30 segundos consulta documento e participantes, indicando revisão diverg
 | `Empty` | Título, descrição e ação opcional para ausência de registros. |
 | `StatusBadge` | Traduz status conhecidos e aplica cor semântica; aceita rótulos derivados como fatura parcial. |
 | `Kpi` | Formata valor monetário com rótulo/detalhe/ícone/tom; clicável quando há callback. |
-| `EntryTable` | Recebe entradas, estado e membros; mostra categoria, instituição, data e status. `portion` escolhe total/pessoal/terceiro. Abertura de detalhes via callback. |
+| `EntryTable` | Recebe entradas, estado e membros; mostra categoria, instituição, data e status. `portion` escolhe total/pessoal/terceiro; `categoryId` restringe à categoria principal. Omite linhas com parcela selecionada zero e exibe categorias/responsáveis somente das divisões selecionadas. Abertura de detalhes usa o registro original via callback. |
 | `Progress` | Percentual de consumo; largura limitada entre 0–100%; alerta em 80%, excesso acima de 100%. |
 
 `styles.css` fornece layout e adaptações em 1500, 1200, 1000, 800 e 600 pixels. `theme.css`, importado depois, redefine cores e componentes visuais. As fontes externas possuem alternativas de fonte no CSS. Gráficos usam Recharts e callbacks para acessar os registros do cálculo.
@@ -89,3 +89,9 @@ O contador do menu Cartões e faturas usa `alertGroups(state, undefined, month).
 ## Início do recebimento de terceiros
 
 Os atalhos Registrar recebimento no painel, Recebimento de terceiro nas ações rápidas e Registrar recebimento em Valores a receber ficam acessíveis para editor/administrador mesmo com saldo a receber zero. O cartão do painel explica a necessidade de vincular uma compra. Ao abrir o modal, App consulta as obrigações: com valor a receber, mostra ReceiptForm; sem obrigação, mostra ReceiptGuide com instruções e ações de cadastrar pessoa, abrir nova despesa ou navegar a Lançamentos para vincular uma compra existente. Leitores continuam sem permissão de registro. O guia não grava dinheiro nem cria receita; o recebimento continua exigindo compra e contato vinculados.
+
+## Detalhes coerentes com indicadores
+
+`EntryScope` transporta `portion` (all/personal/third) e `categoryId` opcionais. `PageProps.showEntries(title, entries, scope?)` armazena o escopo no diálogo; App explica a perspectiva e a passa a EntryTable. Saldo e gastos pessoais do painel usam personal; gráficos de categorias e orçamentos usam personal e a categoria raiz; indicadores de contas a pagar preservam a parte selecionada. O gráfico de evolução abre despesas do cálculo mensal e receitas recebidas por data de realização. Detalhes de faturas usam all, conservando compras de terceiros.
+
+A tabela calcula valores sobre divisões, exclui linhas sem valor no escopo e mantém o registro original para consulta/edição ao clicar. Não modifica o documento financeiro. Valores e nomes de terceiros deixam de aparecer em consultas pessoais; compra mista aparece somente com sua parcela pessoal. O cálculo do saldo já excluía terceiros e não foi alterado.
