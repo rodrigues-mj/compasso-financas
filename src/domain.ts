@@ -53,8 +53,11 @@ export function suggestInvoice(card: Card, date: string): string {
   return card.dueDay <= card.closingDay ? addMonths(closingMonth, 1) : closingMonth;
 }
 export function closingDate(card: Card, invoiceMonth: string) { return monthDate(card.dueDay <= card.closingDay ? addMonths(invoiceMonth, -1) : invoiceMonth, card.closingDay); }
-export function suggestRegistrationInvoice(card: Card, date: string, selectedMonth: string, minimumMonth = currentMonth()): string {
-  return [suggestInvoice(card, date), selectedMonth, minimumMonth].sort().at(-1)!;
+export function registrationStart(firstInvoice: string, requested: number, minimumMonth?: string) {
+  if (!minimumMonth || !/^\d{4}-(0[1-9]|1[0-2])$/.test(firstInvoice)) return requested;
+  const [year, month] = firstInvoice.split('-').map(Number);
+  const [minimumYear, minimumNumber] = minimumMonth.split('-').map(Number);
+  return Math.max(requested, 1, (minimumYear - year) * 12 + minimumNumber - month + 1);
 }
 export function splitCents(total: number, count: number): number[] {
   if (!Number.isInteger(count) || count < 1 || count > 120 || total < count) throw new Error('Informe de 1 a 120 parcelas, com pelo menos um centavo em cada.');

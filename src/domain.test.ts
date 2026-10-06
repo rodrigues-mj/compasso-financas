@@ -1,14 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import * as D from './domain';
-describe('Sugestão da fatura no cadastro', () => {
-  const card = { closingDay: 20, dueDay: 28 } as D.Card;
-  it('mantém compra de agosto na fatura atual, sem sugerir cobranças passadas', () => {
-    expect(D.suggestRegistrationInvoice(card, '2026-08-05', '2026-10', '2026-10')).toBe('2026-10');
-    expect(D.suggestRegistrationInvoice(card, '2026-08-05', '2026-08', '2026-10')).toBe('2026-10');
+describe('Primeira fatura original e parcela atual', () => {
+  it('registra outubro como 2/3 e novembro como 3/3 quando a primeira fatura foi setembro', () => {
+    const { s, card, entry } = fixture();
+    const start = D.registrationStart('2026-09', 1, '2026-10');
+    expect(start).toBe(2);
+    const month = D.addMonths('2026-09', start - 1);
+    const saved = D.createPurchaseFromOriginal(s, entry('expense', 28900, { cardId: card.id, date: '2026-08-21' }), 3, month, start);
+    expect(saved.entries.map(e => [e.installment, e.month, e.amount])).toEqual([[2, '2026-10', 9633], [3, '2026-11', 9633]]);
+    expect(D.monthly(saved, '2026-09').expenses).toHaveLength(0);
+    expect(saved.entries[0].date).toBe('2026-08-21');
+    expect(D.addMonths(saved.entries[0].month, 1 - saved.entries[0].installment!)).toBe('2026-09');
   });
-  it('respeita mês futuro selecionado e fechamento para compras novas', () => {
-    expect(D.suggestRegistrationInvoice(card, '2026-08-05', '2026-12', '2026-10')).toBe('2026-12');
-    expect(D.suggestRegistrationInvoice(card, '2026-10-20', '2026-10', '2026-10')).toBe('2026-11');
+  it('respeita parcela posterior, virada de ano e edição histórica', () => {
+    expect(D.registrationStart('2026-09', 3, '2026-10')).toBe(3);
+    expect(D.registrationStart('2026-12', 1, '2027-01')).toBe(2);
+    expect(D.registrationStart('2026-11', 1, '2026-10')).toBe(1);
+    expect(D.registrationStart('2026-09', 1)).toBe(1);
+    expect(D.registrationStart('2026-06', 1, '2026-10')).toBe(5);
   });
 });
 const user = '11111111-1111-4111-8111-111111111111';
