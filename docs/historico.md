@@ -19,3 +19,9 @@ Acrescentar entrada com data, referência de código quando disponível, comport
 Formulário passa a receber total original, quantidade original e parcela inicial, exibindo prévia das faturas e do total efetivamente registrado. Categorias e responsáveis dividem o total original. Centavos e divisões são calculados antes de omitir parcelas anteriores. Metadados opcionais preservam o total original na edição; compras parciais antigas mantêm seus valores até conversão explícita. Revisados domínio, interface e banco. Nenhuma migração ou alteração em dados financeiros reais.
 
 Validação: 24 testes de domínio/formulário, teste PostgreSQL local e build aprovados. No navegador, conferidos cadastro de exemplo iniciando na terceira parcela, valores e faturas da prévia, gravação, persistência após recarregar e reabertura com total original preservado.
+
+## 06/10/2026 — faturas por competência selecionada
+
+Cartões e faturas passa a mostrar somente faturas e pagamentos do mês selecionado, mantendo parcelas previstas para projeções. Cadastro novo não sugere nem aceita fatura inicial de mês passado; compras antigas preservam a data original e começam na competência atual ou futura. Escolha manual de fatura não é sobrescrita pela data/cartão; edição conserva histórico. Documentação de interface e domínio atualizada; esquema, RPCs e persistência não mudaram, sem migração ou exclusão de dados reais.
+
+Validação: 28 testes locais de domínio/formulário e teste PostgreSQL passaram. Construção TypeScript/Vite passou. Regressões cobrem troca de mês, parcelas previstas preservadas, data antiga, limite do novo cadastro, edição histórica e fechamento. Publicação em produção depende de aprovação.

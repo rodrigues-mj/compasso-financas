@@ -36,7 +36,7 @@ Todas recebem `PageProps`: estado, membros, mês, permissão de escrita e callba
 |---|---|
 | `Dashboard` | Saldo planejado, receitas, gastos pessoais e terceiros, evolução, categorias e próximos vencimentos; abre registros dos cálculos. |
 | `Transactions` | Mesma função para Lançamentos e Contas a pagar (`bills=true`); filtros, consulta, exportação e apresentação de compromissos; geração de próximas ocorrências no fluxo de contas. |
-| `Cards` | Cartões, limite estimado, faturas e pagamentos; permite abrir compra/pagamento e desfazer registro de pagamento mediante confirmação. Não executa pagamento bancário. |
+| `Cards` | Cartões, limite estimado, faturas e pagamentos da competência selecionada; permite abrir compra/pagamento e desfazer registro de pagamento mediante confirmação. Não executa pagamento bancário. |
 | `Thirds` | Obrigações por pessoa/compra, recebimentos, saldo separado, contatos e devoluções. Desfazer recebimento requer ausência de uso e devolução vinculados. |
 | `Entities` | Lista bancos ou categorias, com opção de mostrar arquivados e abrir cadastro. |
 | `ReturnsHistory` | Auxiliar de terceiros: histórico e desfazimento de devoluções registradas. |
@@ -75,3 +75,9 @@ Trocar para receita remove cartão e reinicia divisão com categoria de receita.
 ## Onde alterar um fluxo
 
 Nova regra financeira: `domain.ts`, testes e SQL quando a regra protege dados persistidos. Novo formulário: `forms.tsx`, caso de `Dialog`/renderização no `App` e callbacks quando necessários. Nova visualização: `pages.tsx` e contrato `PageProps`. Novo acesso remoto: `storage.ts` e migração nova. Mudança visual: layout base ou tema conforme responsabilidade; conferir ambos por causa da ordem de CSS. Toda mudança exige atualizar as seções correspondentes deste guia.
+
+## Faturas e datas no cadastro
+
+A lista de faturas e os pagamentos registrados em Cartões e faturas exibem somente a competência selecionada (e o cartão selecionado, quando houver). Consultar outro mês mostra sua fatura; parcelas futuras permanecem armazenadas para projeções e limite estimado, sem geração por navegação. A lista de próximos vencimentos do painel também restringe suas faturas ao mês selecionado; contas diretas conservam sua consulta de próximos vencimentos. Alertas globais continuam permitindo identificar dívidas reais atrasadas. Nenhum histórico é excluído automaticamente.
+
+Em compras novas, a sugestão de fatura nunca antecede o mês atual nem o mês selecionado. A data original da compra pode ser antiga: a parcela inicial deve corresponder à fatura atual ou futura. O campo de mês possui mínimo e validação no envio. Ajustar a fatura manualmente impede que alterações posteriores de data ou cartão sobrescrevam a escolha. Na edição, a fatura existente é preservada e históricos continuam editáveis, sujeitos às proteções de pagamentos e recebimentos.

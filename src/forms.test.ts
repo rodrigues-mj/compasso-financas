@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { EntryForm } from './forms';
+import { Cards, type PageProps } from './pages';
 import * as D from './domain';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -14,6 +15,14 @@ function setup() {
   return { state, template, render };
 }
 describe('Formulário de parcelamento', () => {
+  it('limita novos cadastros ao mês atual e preserva a fatura histórica ao editar', () => {
+    const { state, template, render } = setup();
+    expect(render(state)).toContain(`min="${D.currentMonth()}"`);
+    const saved = D.createPurchaseFromOriginal(state, template, 6, '2026-08', 3);
+    const html = render(saved, saved.entries[0]);
+    expect(html).toContain('value="2026-08"');
+    expect(html).not.toContain(`min="${D.currentMonth()}"`);
+  });
   it('pede o total original e informa como visualizar as faturas', () => {
     const { state, render } = setup(); const html = render(state);
     expect(html).toContain('Valor total original da compra');
@@ -41,5 +50,22 @@ describe('Formulário de parcelamento', () => {
     expect(html).toContain('value="100,01"');
     expect(html).toContain('Informar o total original e recalcular');
     expect(html).not.toContain('Total original:');
+  });
+});
+
+describe('Faturas por mês', () => {
+  it('mostra apenas o mês escolhido e mantém as parcelas futuras no estado', () => {
+    const { state, template } = setup();
+    const saved = D.createPurchaseFromOriginal(state, template, 6, '2026-08', 3);
+    const noop = () => {};
+    const props: PageProps = { state: saved, members: [], month: '2026-10', writable: true, openEntry: noop, newEntry: noop, editEntity: noop, openPayment: noop, openReceipt: noop, openReturn: noop, openBudget: noop, showEntries: noop, commit: async () => {} };
+    const october = renderToStaticMarkup(createElement(Cards, props));
+    expect(october).toContain('outubro de 2026 · vence');
+    expect(october).not.toContain('agosto de 2026 · vence');
+    expect(october).not.toContain('novembro de 2026 · vence');
+    const november = renderToStaticMarkup(createElement(Cards, { ...props, month: '2026-11' }));
+    expect(november).toContain('novembro de 2026 · vence');
+    expect(november).not.toContain('outubro de 2026 · vence');
+    expect(saved.entries.map(e => e.installment)).toEqual([3, 4, 5, 6]);
   });
 });

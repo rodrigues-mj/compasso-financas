@@ -116,3 +116,7 @@ Uma compra de 15.000, com 10.000 pessoais e 5.000 de terceiro, consome 10.000 do
 `reportRows(state, perspective, includeThird=false)` produz linhas por divisão. Em `consumption`, despesas diretas usam data do lançamento, cartão usa dia de vencimento na competência e receitas usam data do lançamento, incluindo previstas. Em `cash`, apenas lançamentos diretos realizados usam `paidDate`; compras do cartão são omitidas e pagamentos da fatura entram pela data de pagamento, com parte própria `amount - usos`. Quando solicitado, recebimentos, devoluções e pagamentos com terceiros aparecem separadamente.
 
 Estorno pessoal é despesa negativa. Em caixa, estorno direto de terceiro aparece como entrada de terceiro. Os totais de receita dos relatórios por competência podem diferir de `monthly.income`, pois usam datas e status diferentes. Manter essa distinção em novas telas e exportações.
+
+## Sugestão da fatura para novas compras
+
+`suggestRegistrationInvoice(card, date, selectedMonth, minimumMonth=currentMonth())` retorna o maior mês entre a sugestão do ciclo, a competência selecionada e o mês mínimo. O helper não altera a data original nem elimina parcelas. O formulário aplica essa sugestão somente enquanto não houver escolha manual e bloqueia cadastro novo com fatura inicial anterior ao mês atual. Funções de domínio de compras conservam suporte histórico para edição e backups; essa restrição é do fluxo de cadastro. Faturas são projeções, não registros criados ao mudar de mês.

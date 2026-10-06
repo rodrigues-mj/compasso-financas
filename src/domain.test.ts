@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import * as D from './domain';
+describe('Sugestão da fatura no cadastro', () => {
+  const card = { closingDay: 20, dueDay: 28 } as D.Card;
+  it('mantém compra de agosto na fatura atual, sem sugerir cobranças passadas', () => {
+    expect(D.suggestRegistrationInvoice(card, '2026-08-05', '2026-10', '2026-10')).toBe('2026-10');
+    expect(D.suggestRegistrationInvoice(card, '2026-08-05', '2026-08', '2026-10')).toBe('2026-10');
+  });
+  it('respeita mês futuro selecionado e fechamento para compras novas', () => {
+    expect(D.suggestRegistrationInvoice(card, '2026-08-05', '2026-12', '2026-10')).toBe('2026-12');
+    expect(D.suggestRegistrationInvoice(card, '2026-10-20', '2026-10', '2026-10')).toBe('2026-11');
+  });
+});
 const user = '11111111-1111-4111-8111-111111111111';
 function fixture() {
   const s = D.emptyState(); s.categories = D.suggestedCategories();
