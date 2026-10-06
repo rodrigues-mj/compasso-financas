@@ -5,7 +5,7 @@ import * as D from './domain';
 import * as S from './storage';
 import { demoData } from './demo';
 import { Modal, Field, Empty, EntryTable, StatusBadge } from './components';
-import { EntryForm, EntityForm, PaymentForm, ReceiptForm, RefundForm, BudgetForm, SettleForm, ReturnForm } from './forms';
+import { EntryForm, EntityForm, PaymentForm, ReceiptForm, ReceiptGuide, RefundForm, BudgetForm, SettleForm, ReturnForm } from './forms';
 import { Dashboard, Transactions, Cards, Thirds, Entities, Budgets, Reports, type PageProps } from './pages';
 import installationSql from '../supabase/migrations/001_compasso.sql?raw';
 import invitationSql from '../supabase/migrations/002_convites.sql?raw';
@@ -127,7 +127,7 @@ export default function App() {
       {modal.type === 'entry' && <EntryForm {...shared} entry={modal.entry} kind={modal.kind} defaultCard={modal.cardId} defaultMonth={month} />}
       {modal.type === 'entity' && <EntityForm {...shared} collection={modal.collection} entity={modal.entity} />}
       {modal.type === 'payment' && <PaymentForm {...shared} inv={D.invoice(state, modal.inv.card.id, modal.inv.month)} />}
-      {modal.type === 'receipt' && <ReceiptForm {...shared} entryId={modal.entryId} contactId={modal.contactId} />}
+      {modal.type === 'receipt' && (D.thirds(state).outstanding > 0 ? <ReceiptForm {...shared} entryId={modal.entryId} contactId={modal.contactId} /> : <ReceiptGuide addContact={() => setModal({ type: 'entity', collection: 'contacts' })} newExpense={() => setModal({ type: 'entry', kind: 'expense' })} existingExpense={() => { setPage('transactions'); setModal(null); }} />)}
       {modal.type === 'return' && <ReturnForm {...shared} receiptId={modal.receiptId} entryId={modal.entryId} contactId={modal.contactId} />}
       {modal.type === 'refund' && <RefundForm {...shared} entry={modal.entry} />}
       {modal.type === 'settle' && <SettleForm {...shared} entry={modal.entry} />}

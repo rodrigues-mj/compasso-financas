@@ -37,3 +37,9 @@ Validação local: 29 testes de domínio/formulário, PostgreSQL e construção 
 Corrigido bloqueio que impedia escolher a primeira fatura original no passado. O formulário usa esse mês como referência da parcela 1 e omite competências anteriores em novos cadastros, preservando a numeração original. Exemplo fictício: primeira fatura setembro, três parcelas e cadastro em outubro gera 2/3 outubro e 3/3 novembro. Edição reconstrói a referência original sem alterar histórico automaticamente. Revisados domínio e interface; contratos de persistência, banco, permissões, arquitetura e comandos permanecem compatíveis, sem migração.
 
 Validação local: 29 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressão usa R$ 289, compra de agosto e primeira fatura setembro para gerar 2/3 outubro e 3/3 novembro, sem gasto em setembro; inclui recuperação da referência original na edição, virada de ano e manutenção da escolha de parcela posterior. Links locais conferidos. Produção aguarda aprovação.
+
+## 06/10/2026 — atalhos de recebimento sem obrigação
+
+Corrigido estado silencioso dos botões de recebimento quando A receber é zero. Atalhos abrem guia com ações de cadastrar pessoa e vincular compra existente/nova; havendo obrigação, abrem formulário normal. Leitores permanecem sem escrita. Documentação de interface atualizada; domínio, regras financeiras, banco, permissões, persistência, arquitetura e comandos seguem compatíveis. Sem migração ou alteração de dados reais.
+
+Validação local: 31 testes de domínio/formulário, PostgreSQL e construção TypeScript/Vite passaram. Regressões verificam atalhos habilitados no painel e Valores a receber com saldo zero, restrições para leitor e guia sem formulário de gravação, com caminho para compra existente. Links locais conferidos. Publicação aguarda aprovação.

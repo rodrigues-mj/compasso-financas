@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { EntryForm } from './forms';
-import { Cards, type PageProps } from './pages';
+import { EntryForm, ReceiptGuide } from './forms';
+import { Cards, Dashboard, Thirds, type PageProps } from './pages';
 import * as D from './domain';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -68,5 +68,35 @@ describe('Faturas por mês', () => {
     expect(november).toContain('novembro de 2026 · vence');
     expect(november).not.toContain('outubro de 2026 · vence');
     expect(saved.entries.map(e => e.installment)).toEqual([3, 4, 5, 6]);
+  });
+});
+
+describe('Atalhos de recebimento de terceiros', () => {
+  const noop = () => {};
+  function props(writable = true): PageProps {
+    return { state: setup().state, members: [], month: '2026-10', writable, openEntry: noop, newEntry: noop, editEntity: noop, openPayment: noop, openReceipt: noop, openReturn: noop, openBudget: noop, showEntries: noop, commit: async () => {} };
+  }
+  it('permite iniciar pelo painel e valores a receber mesmo sem obrigações, preservando leitor', () => {
+    const dashboard = renderToStaticMarkup(createElement(Dashboard, props()));
+    const shortcuts = [...dashboard.matchAll(/<button([^>]*)>([\s\S]*?)<\/button>/g)].filter(m => /Registrar recebimento|Recebimento de terceiro/.test(m[2]));
+    expect(shortcuts).toHaveLength(2);
+    for (const shortcut of shortcuts) expect(shortcut[1]).not.toContain('disabled');
+    const thirds = renderToStaticMarkup(createElement(Thirds, props()));
+    expect(thirds).toContain('Registrar recebimento');
+    const thirdsReceipt = [...thirds.matchAll(/<button([^>]*)>([\s\S]*?)<\/button>/g)].find(m => /Registrar recebimento/.test(m[2]));
+    expect(thirdsReceipt?.[1]).not.toContain('disabled');
+    expect(renderToStaticMarkup(createElement(Thirds, props(false)))).not.toContain('Registrar recebimento');
+    const reader = renderToStaticMarkup(createElement(Dashboard, props(false)));
+    const receiptButton = [...reader.matchAll(/<button([^>]*)>([\s\S]*?)<\/button>/g)].find(m => /Registrar recebimento/.test(m[2]));
+    expect(receiptButton?.[1]).toContain('disabled');
+  });
+  it('explica a vinculação e oferece caminho para compra existente sem permitir recebimento sem vínculo', () => {
+    const html = renderToStaticMarkup(createElement(ReceiptGuide, { addContact: noop, newExpense: noop, existingExpense: noop }));
+    expect(html).toContain('Não há valores de terceiros a receber');
+    expect(html).toContain('Adicionar pessoa externa');
+    expect(html).toContain('Vincular compra existente');
+    expect(html).toContain('Registrar nova compra');
+    expect(html).toContain('evitar duplicá-lo');
+    expect(html).not.toContain('<form');
   });
 });

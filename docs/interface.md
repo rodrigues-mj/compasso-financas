@@ -85,3 +85,7 @@ O campo Primeira fatura original indica o mês da parcela 1 e permite meses ante
 ## Contador de cartões e sino
 
 O contador do menu Cartões e faturas usa `alertGroups(state, undefined, month).invoices`: somente faturas da competência selecionada com restante positivo e vencimento passado ou até sete dias à frente. Trocar o mês recalcula o número; sem alertas, o selo não aparece. O título do selo explicita esse alcance. O sino continua usando `alertGroups(state)` sem filtro, preservando alertas de contas, receitas e faturas de todos os meses. Não altera obrigações, parcelas ou pagamentos.
+
+## Início do recebimento de terceiros
+
+Os atalhos Registrar recebimento no painel, Recebimento de terceiro nas ações rápidas e Registrar recebimento em Valores a receber ficam acessíveis para editor/administrador mesmo com saldo a receber zero. O cartão do painel explica a necessidade de vincular uma compra. Ao abrir o modal, App consulta as obrigações: com valor a receber, mostra ReceiptForm; sem obrigação, mostra ReceiptGuide com instruções e ações de cadastrar pessoa, abrir nova despesa ou navegar a Lançamentos para vincular uma compra existente. Leitores continuam sem permissão de registro. O guia não grava dinheiro nem cria receita; o recebimento continua exigindo compra e contato vinculados.
