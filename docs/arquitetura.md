@@ -37,6 +37,7 @@ As regras locais ficam em `domain.ts`. Os formulários produzem um novo `State`,
 | `src/components.tsx` | Modal com foco, campos, estados vazios, indicadores, tabela de lançamentos e progresso. |
 | `src/demo.ts` | `demoData()` gera exemplos relativos ao mês atual, com salário, despesas, terceiro, compras parceladas e orçamentos. Usa IDs novos e regras reais; não acessa dados de produção. |
 | `src/domain.test.ts` | Cenários Vitest das regras financeiras. |
+| `src/forms.test.ts` | Verifica os textos, valores e a prévia do formulário de compras novas e antigas. |
 | `src/styles.css` | Layout base, tipografia, grids, tabelas, gráficos, estados, formulários e adaptações responsivas. Importa DM Sans e Manrope de Google Fonts. |
 | `src/theme.css` | Sobrescreve a apresentação para o tema azul; terceiros em violeta, mantendo cores semânticas dos status. |
 | `scripts/test-database.mjs` | Cria PostgreSQL isolado via PGlite, simula Auth e verifica SQL, RLS e transições. |

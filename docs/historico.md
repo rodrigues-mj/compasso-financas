@@ -13,3 +13,9 @@ Validação: leitura dos módulos e configurações versionados, revisão de con
 ## Como registrar próximas mudanças
 
 Acrescentar entrada com data, referência de código quando disponível, comportamento alterado, documentos revisados e verificações efetivamente realizadas. Diferenciar validação local, CI e nuvem; omitir credenciais e dados reais. Reescrever a documentação principal para refletir a implementação vigente, mantendo aqui o histórico das mudanças.
+
+## 06/10/2026 — parcelamento pelo total original
+
+Formulário passa a receber total original, quantidade original e parcela inicial, exibindo prévia das faturas e do total efetivamente registrado. Categorias e responsáveis dividem o total original. Centavos e divisões são calculados antes de omitir parcelas anteriores. Metadados opcionais preservam o total original na edição; compras parciais antigas mantêm seus valores até conversão explícita. Revisados domínio, interface e banco. Nenhuma migração ou alteração em dados financeiros reais.
+
+Validação: 24 testes de domínio/formulário, teste PostgreSQL local e build aprovados. No navegador, conferidos cadastro de exemplo iniciando na terceira parcela, valores e faturas da prévia, gravação, persistência após recarregar e reabertura com total original preservado.

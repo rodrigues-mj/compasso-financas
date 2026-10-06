@@ -103,3 +103,10 @@ tbody tr:hover, .due-item:hover { background: #f8fafc; }
 .auth-divider { border-color: var(--line); color: #64748b; }
 /* Valores realizados, alertas e erros mantêm verde, âmbar e vermelho. */
 .positive { color: #35775e; }
+
+.purchase-preview h3 { margin: 0 0 8px; font-size: 14px; }
+.purchase-preview p { margin: 6px 0; }
+.purchase-preview summary { cursor: pointer; margin-top: 10px; }
+.purchase-preview ul { list-style: none; padding: 0; margin: 8px 0; max-height: 230px; overflow-y: auto; }
+.purchase-preview li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #d8e3f2; }
+.purchase-preview li strong { white-space: nowrap; }

@@ -10,6 +10,36 @@ function fixture() {
   return { s, card, contact, entry };
 }
 describe('Compras em andamento', () => {
+  it('usa o total original e omite parcelas anteriores sem redistribuir seus centavos', () => {
+    const { s, card, entry } = fixture();
+    const template = entry('expense', 10001, { cardId: card.id });
+    const state = D.createPurchaseFromOriginal(s, template, 6, '2026-10', 3);
+    const preview = D.purchaseSchedule(10001, 6, '2026-10', 3);
+    expect(state.entries.map(e => ({ installment: e.installment, amount: e.amount, month: e.month }))).toEqual(preview);
+    expect(state.entries.map(e => e.amount)).toEqual([1667, 1667, 1667, 1666]);
+    expect(state.entries.reduce((sum, e) => sum + e.amount, 0)).toBe(6667);
+    expect(state.entries.map(e => e.month)).toEqual(['2026-10', '2026-11', '2026-12', '2027-01']);
+    expect(D.monthly(state, '2026-09').expenses).toHaveLength(0);
+    const saved = D.validateState(JSON.parse(JSON.stringify(state)));
+    expect(saved.entries[0].purchaseOriginal).toEqual({ amount: 10001, allocations: template.allocations });
+    const original = saved.entries[0].purchaseOriginal!;
+    const edited = D.createPurchaseFromOriginal({ ...saved, entries: [] }, { ...template, ...original }, 6, '2026-10', 3);
+    expect(edited.entries.map(e => e.amount)).toEqual(state.entries.map(e => e.amount));
+  });
+  it('mantém as divisões de cada parcela original e preserva outros lançamentos', () => {
+    const { s, card, contact, entry } = fixture();
+    const categoryId = s.categories[0].id;
+    const unrelated = entry('income', 999);
+    s.entries.push(unrelated);
+    const template = entry('expense', 10001, { cardId: card.id, allocations: [{ categoryId, amount: 6667 }, { categoryId, amount: 3334, contactId: contact.id }] });
+    const complete = D.createPurchaseFromOriginal(s, template, 6, '2026-08');
+    const partial = D.createPurchaseFromOriginal(s, template, 6, '2026-10', 3);
+    expect(partial.entries[0]).toEqual(unrelated);
+    expect(partial.entries.slice(1).map(e => e.allocations)).toEqual(complete.entries.slice(3).map(e => e.allocations));
+    expect(D.createPurchaseFromOriginal(s, template, 6, '2026-10', 6).entries[1].amount).toBe(1666);
+    expect(() => D.createPurchaseFromOriginal(s, template, 6, '2026-10', 7)).toThrow(/parcela inicial/);
+    expect(() => D.purchaseSchedule(2, 6, '2026-10', 6)).toThrow(/centavo/);
+  });
   it('registra apenas 3 a 6, com valores pessoais e de terceiros nas faturas corretas', () => {
     const { s, card, contact, entry } = fixture();
     const categoryId = s.categories[0].id;
