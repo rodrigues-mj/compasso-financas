@@ -53,7 +53,7 @@ Os filtros e a seleção dos relatórios são locais à página. Totais de recei
 
 | Formulário | Conversão e operação |
 |---|---|
-| `EntryForm` | Monta receita/despesa, divisões e banco opcional por nome. Para compra, soma grupo atual e divisões, usa número total/parcela inicial/fatura inicial e `createPurchase`. Para edição recorrente usa `editSeries`; para série nova gera até final do mês 12 meses à frente. Demais casos inserem/substituem `Entry`. Valida antes de commit. |
+| `EntryForm` | Monta receita/despesa, divisões e banco opcional por nome. Para compra nova, recebe total original e divisões da compra inteira, número total de parcelas e registrar a partir da parcela; usa `createPurchaseFromOriginal`. Mostra prévia com cada parcela, fatura, total original e total a registrar antes das categorias. Uma única divisão acompanha automaticamente o total e tem valor somente leitura. Na edição, usa `purchaseOriginal` quando disponível; compras antigas parciais continuam com total cadastrado e `createPurchase`, com conversão explícita que limpa valores para novo preenchimento. Para edição recorrente usa `editSeries`; para série nova gera até final do mês 12 meses à frente. Demais casos inserem/substituem `Entry`. Valida antes de commit. |
 | `EntityForm` | Cria/edita/arquiva bancos, contatos, categorias e cartões. Cartão acrescenta titular/banco, limite, fechamento, vencimento e últimos dígitos; categoria acrescenta tipo/pai. |
 | `PaymentForm` | Sugere restante e terceiro disponível; gera ID estável durante montagem; chama `payInvoice` com valor, data e banco. |
 | `ReceiptForm` | Seleciona obrigações ainda a receber, permite vários vínculos, soma partes e define `replacement` conforme realização/quitação. ID estável; chama `addReceipt`. |

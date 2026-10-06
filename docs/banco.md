@@ -102,3 +102,7 @@ Restauração no `SettingsPage`: limita tamanho de arquivo, confere envelope, va
 Migração 001 instala a estrutura em transação; 002 atualiza as duas funções de convites/participantes. A 001 atual já inclui essas proteções, e a 002 mantém compatibilidade com instalações anteriores. Não reaplicar a 001 em tabelas existentes. Migrações aplicadas não devem ser editadas; qualquer mudança futura deve usar novo arquivo numerado e documentar pré-requisitos/efeitos. Esta documentação não aplica mudanças na nuvem.
 
 Não há interface de navegação/restauração direta de `finance_history`, retenção automática nem paginação do documento nesta versão. Monitorar tamanho do documento e crescimento do histórico ao planejar evolução.
+
+## Metadados do total original da compra
+
+`entries[].purchaseOriginal` é um objeto opcional com `amount` e `allocations`, preservado no documento JSON para reabrir o formulário. Não participa dos totais financeiros ou regras de pagamentos; estes continuam usando `entries[].amount` e `allocations`. Nenhuma migração de banco é necessária: o documento aceita os metadados opcionais. Dados antigos não são convertidos nem recalculados automaticamente.

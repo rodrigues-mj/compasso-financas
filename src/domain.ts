@@ -11,6 +11,7 @@ export type Entry = {
   date: string; month: string; dueDate?: string; paidDate?: string; status: Status;
   bankId?: string; cardId?: string; paymentMethod: string; notes: string; allocations: Allocation[];
   purchaseId?: string; installment?: number; installmentCount?: number; seriesId?: string; originalId?: string;
+  purchaseOriginal?: { amount: number; allocations: Allocation[] };
   createdBy: string; updatedAt: string;
 };
 export type ReceiptAllocation = { entryId: string; contactId: string; amount: number; replacement: boolean };
@@ -72,6 +73,7 @@ const entrySchema = z.object({
   id: z.string().uuid(), kind: z.enum(['income', 'expense', 'refund']), description: z.string().trim().min(1).max(300), amount: amountSchema, plannedAmount: amountSchema.optional(),
   date: dateSchema, month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), dueDate: dateSchema.optional(), paidDate: dateSchema.optional(), status: z.enum(['pending', 'done', 'cancelled']),
   bankId: z.string().uuid().optional(), cardId: z.string().uuid().optional(), paymentMethod: z.string().max(100), notes: z.string().max(2000), allocations: z.array(allocationSchema).min(1).max(100),
+  purchaseOriginal: z.object({ amount: amountSchema, allocations: z.array(allocationSchema).min(1).max(100) }).refine(p => p.allocations.reduce((sum, a) => sum + a.amount, 0) === p.amount, 'As divisões originais devem somar o total original.').optional(),
   purchaseId: z.string().uuid().optional(), installment: z.number().int().min(1).optional(), installmentCount: z.number().int().min(1).max(120).optional(), seriesId: z.string().uuid().optional(), originalId: z.string().uuid().optional(), createdBy: z.string().uuid(), updatedAt: z.string()
 }).refine(e => e.allocations.reduce((sum, a) => sum + a.amount, 0) === e.amount, 'A soma das divisões deve ser igual ao total.')
   .refine(e => e.cardId || e.status !== 'done' || !!e.paidDate, 'Informe a data do pagamento ou recebimento.')
@@ -207,17 +209,37 @@ export function validateState(input: unknown): State {
   return state;
 }
 
-export function createPurchase(state: State, template: Entry, count: number, firstMonth: string, startInstallment = 1): State {
+export function purchaseSchedule(total: number, count: number, firstMonth: string, startInstallment = 1, originalTotal = true) {
   if (!Number.isInteger(count) || count < 1 || count > 120 || !Number.isInteger(startInstallment) || startInstallment < 1 || startInstallment > count) throw new Error('A parcela inicial deve estar entre 1 e o número total de parcelas.');
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(firstMonth)) throw new Error('Informe a fatura da parcela inicial.');
+  amountSchema.parse(total);
+  const parts = originalTotal ? splitCents(total, count).slice(startInstallment - 1) : splitCents(total, count - startInstallment + 1);
+  return parts.map((amount, index) => ({ installment: startInstallment + index, amount, month: addMonths(firstMonth, index) }));
+}
+
+export function createPurchaseFromOriginal(state: State, template: Entry, count: number, firstMonth: string, startInstallment = 1): State {
+  purchaseSchedule(template.amount, count, firstMonth, startInstallment);
+  // Distribute the complete purchase before omitting earlier installments, including category rounding.
+  const full = createPurchase(state, { ...template, purchaseOriginal: undefined }, count, firstMonth);
+  const newIds = new Set(full.entries.slice(state.entries.length).map(e => e.id));
+  const entries = full.entries.filter(e => !newIds.has(e.id) || e.installment! >= startInstallment).map(e => newIds.has(e.id) ? {
+    ...e, month: addMonths(firstMonth, e.installment! - startInstallment),
+    dueDate: monthDate(addMonths(firstMonth, e.installment! - startInstallment), state.cards.find(c => c.id === template.cardId)!.dueDay),
+    purchaseOriginal: { amount: template.amount, allocations: template.allocations.map(a => ({ ...a })) }
+  } : e);
+  return validateState({ ...full, entries });
+}
+
+export function createPurchase(state: State, template: Entry, count: number, firstMonth: string, startInstallment = 1): State {
+  const schedule = purchaseSchedule(template.amount, count, firstMonth, startInstallment, false);
   if (template.allocations.reduce((s, a) => s + a.amount, 0) !== template.amount) throw new Error('A soma das divisões deve ser exatamente igual ao valor total da compra.');
   entrySchema.parse(template);
   const card = state.cards.find(c => c.id === template.cardId); if (!card || card.archived) throw new Error('Escolha um cartão ativo.');
   // The template contains only the amount and allocations still to be recorded.
-  const purchaseId = id(); const parts = splitCents(template.amount, count - startInstallment + 1); let remaining = template.allocations.map(a => a.amount);
-  const entries = parts.map((amount, index) => {
+  const purchaseId = id(); let remaining = template.allocations.map(a => a.amount);
+  const entries = schedule.map(({ amount, month, installment }) => {
     const allocated = proportional(amount, remaining); remaining = remaining.map((n, i) => n - allocated[i]);
-    const month = addMonths(firstMonth, index);
-    return { ...template, id: id(), purchaseId, installment: index + startInstallment, installmentCount: count, amount, month, dueDate: monthDate(month, card.dueDay), status: 'done' as Status, paidDate: undefined,
+    return { ...template, purchaseOriginal: undefined, id: id(), purchaseId, installment, installmentCount: count, amount, month, dueDate: monthDate(month, card.dueDay), status: 'done' as Status, paidDate: undefined,
       allocations: template.allocations.map((a, i) => ({ ...a, amount: allocated[i] })).filter(a => a.amount > 0) };
   });
   return validateState({ ...state, entries: [...state.entries, ...entries] });

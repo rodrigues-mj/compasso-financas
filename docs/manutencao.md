@@ -25,7 +25,9 @@ npm run dev
 
 ## Cobertura e limites das verificações
 
-`domain.test.ts` cobre início em parcela intermediária, conservação de centavos/divisões, parcela inicial inválida, alertas de contas/receitas/faturas e outros meses, salários e despesas pendentes, pagamento sem duplicidade, separação/uso de terceiros, excessos, reposição após quitação, estornos/créditos, categorias, fechamento e datas, recorrências, caixa/competência, comparação sem base, arquivamento/JSON e proteção de CSV.
+`domain.test.ts` cobre total original, prévia consistente com gravação, omissão de parcelas sem alterar divisões, metadados preservados no JSON e edição, início em parcela intermediária, conservação de centavos/divisões, parcela inicial inválida, alertas de contas/receitas/faturas e outros meses, salários e despesas pendentes, pagamento sem duplicidade, separação/uso de terceiros, excessos, reposição após quitação, estornos/créditos, categorias, fechamento e datas, recorrências, caixa/competência, comparação sem base, arquivamento/JSON e proteção de CSV.
+
+`forms.test.ts` verifica os rótulos do novo cadastro, prévia/total original na reabertura e preservação do modo antigo para compras parciais sem metadados.
 
 `test-database.mjs` cria banco descartável e papéis `anon/authenticated`, simula `auth.users`/`auth.uid()` e aplica a migração 001. Verifica criação/gravação, revisão divergente, escrita direta bloqueada, isolamento de outro usuário, leitor, último admin, e-mail de convite, limites monetários, recebimento/pagamento excessivos, uso de terceiros, restauração, histórico e revogação. O script atual lê **001**, não executa 002 separadamente; as funções protegidas já estão na 001. Não atribuir cobertura independente da 002 a essa execução.
 

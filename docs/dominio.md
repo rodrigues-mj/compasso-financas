@@ -21,7 +21,7 @@ Participantes possuem login e função no espaço. Contatos são terceiros sem a
 | `Category` | Base + `kind: income/expense`, `parentId?`. |
 | `Card` | Base + `bankId?`, `holderId?`, `limit` em centavos, `closingDay`, `dueDay` entre 1 e 31 e `last4?`. |
 | `Allocation` | `categoryId`, `amount`, `ownerId?` ou `contactId?`; separa finalidade e responsável. |
-| `Entry` | `id`, `kind: income/expense/refund`, `description`, `amount`, `plannedAmount?`, `date`, `month`, `dueDate?`, `paidDate?`, `status`, `bankId?`, `cardId?`, `paymentMethod`, `notes`, `allocations`, `createdBy`, `updatedAt`. |
+| `Entry` | `id`, `kind: income/expense/refund`, `description`, `amount`, `plannedAmount?`, `date`, `month`, `dueDate?`, `paidDate?`, `status`, `bankId?`, `cardId?`, `paymentMethod`, `notes`, `allocations`, `createdBy`, `updatedAt`, `purchaseOriginal?` (total e divisões originais, sem efeito nos totais financeiros). |
 | Vínculos de `Entry` | `purchaseId?` agrupa parcelas; `installment?` e `installmentCount?` identificam posição; `seriesId?` liga recorrência; `originalId?` liga estorno à despesa. |
 | `ReceiptAllocation` | `entryId`, `contactId`, `amount`, `replacement`. O último marca reposição após obrigação já realizada/quitada. |
 | `Receipt` | `id`, `date`, `bankId?`, `amount`, `notes`, `allocations`. Recebimento separado de receitas próprias. |
@@ -68,7 +68,11 @@ Participantes possuem login e função no espaço. Contatos são terceiros sem a
 
 `createPurchase(state, template, count, firstMonth, startInstallment=1)` gera somente as parcelas de `startInstallment` até `count`. O `template.amount` é a soma **das parcelas a registrar**, não o preço original se parcelas anteriores forem omitidas. Valida total distribuído e cartão ativo, divide valores e divisões preservando centavos, gera `purchaseId` e IDs das parcelas, desloca competências e define vencimentos. Cada parcela fica `done`, sem `paidDate`. Retorna novo estado validado.
 
-Exemplo: 10.000 centavos em três parcelas produz 3.334, 3.333 e 3.333. Para começar na parcela 3 de 6, informar o total restante; são geradas quatro parcelas, numeradas 3, 4, 5 e 6. Editar compra no formulário remove o grupo e o recria; vínculos existentes podem impedir a operação.
+O formulário novo usa `createPurchaseFromOriginal(state, template, count, firstMonth, startInstallment=1)`: `template.amount` e divisões representam a compra inteira. Distribui centavos e categorias em todas as parcelas antes de omitir as anteriores à inicial; somente as selecionadas são persistidas, sem gerar receitas, pagamentos ou registros históricos omitidos. A fatura informada corresponde à parcela inicial. Cada parcela conserva `purchaseOriginal: { amount, allocations }`, metadado opcional validado pelo schema e usado para edição e backup.
+
+`purchaseSchedule(total, count, firstMonth, startInstallment=1, originalTotal=true)` valida valores, quantidade, parcela inicial e mês; fornece valores/numeração/faturas da prévia. Com `originalTotal=false`, conserva o cálculo antigo sobre o total das parcelas cadastradas.
+
+Exemplo fictício: 10.001 centavos em seis parcelas, a partir da terceira, registra 1.667, 1.667, 1.667 e 1.666, totalizando 6.667. Editar compra remove o grupo e o recria; vínculos existentes podem impedir a operação. Cadastros antigos parciais sem metadados conservam o modo anterior; mudar para total original exige opção explícita e novo preenchimento.
 
 A realização de uma conta/receita direta acontece no `SettleForm`: altera o mesmo lançamento, conserva o primeiro valor previsto em `plannedAmount`, atualiza valor real/data e redistribui proporções. Não cria despesa duplicada nem pagamento de fatura.
 
