@@ -2,6 +2,12 @@
 
 [Índice](README.md)
 
+## 06/10/2026 — mês de terceiros e totais por seleção
+
+Valores a receber agora respeitam a competência escolhida e o filtro de pessoa nos indicadores, obrigações, recebimentos e devoluções. Recebimentos repartidos contribuem somente com as divisões vinculadas à seleção. O painel identifica seu saldo de terceiros como global. Resumos adicionados aos lançamentos, contas a pagar, faturas/pagamentos, registros dos relatórios e diálogos de consulta; cancelados fora dos totais e terceiros fora do resultado pessoal. Categoria e responsável filtram também as divisões, calendário, CSV e ordenação por valor. Filtro de responsáveis inclui contatos externos e compartilhados.
+
+Validação: 41 testes de domínio/formulário, PostgreSQL isolado e construção TypeScript/Vite; regressões para mês/pessoa, recebimento entre competências, uso/devolução/estorno, filtros combinados, pendências, cancelamentos, subtotais pessoais/terceiros, troca de mês e consultas vazias. Documentação de interface/domínio atualizada e links locais conferidos. Sem alteração de dados, migração, RPC, autenticação ou persistência; banco e arquitetura continuam compatíveis.
+
 ## 06/10/2026 — parcelamento mensal sem cartão
 
 Adicionado cadastro único de boletos, carnês e financiamentos com valor por parcela, quantidade original, parcela inicial e próximo vencimento. Gera somente as restantes até o término, mantém a data original no template e registra competência por vencimento. A inicial pode estar paga; futuras ficam pendentes. Edição usa escopos da série e conserva demais pagamentos, numeração e valores previstos. Corrigida a substituição da ocorrência selecionada ao realizá-la junto à edição das próximas. Calendário/CSV identificam a parcela; resumo não oferece geração além do fim.

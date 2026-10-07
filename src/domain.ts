@@ -6,6 +6,25 @@ export type Entity = { id: string; name: string; color: string; archived: boolea
 export type Category = Entity & { kind: 'income' | 'expense'; parentId?: string };
 export type Card = Entity & { bankId?: string; holderId?: string; limit: number; closingDay: number; dueDay: number; last4?: string };
 export type Allocation = { categoryId: string; amount: number; ownerId?: string; contactId?: string };
+export type EntryScope = { portion?: 'all' | 'personal' | 'third'; categoryId?: string; responsible?: string };
+export function scopedAllocations(state: State, entry: Entry, scope: EntryScope = {}) {
+  return entry.allocations.filter(a => (!scope.portion || scope.portion === 'all' || (scope.portion === 'personal' ? !a.contactId : !!a.contactId))
+    && (!scope.categoryId || a.categoryId === scope.categoryId || categoryRoot(state, a.categoryId) === scope.categoryId)
+    && (!scope.responsible || (scope.responsible === 'shared' ? !a.ownerId && !a.contactId : (!!a.ownerId && scope.responsible === `member:${a.ownerId}`) || (!!a.contactId && scope.responsible === `contact:${a.contactId}`))));
+}
+export function scopedAmount(state: State, entry: Entry, scope: EntryScope = {}) { return scopedAllocations(state, entry, scope).reduce((sum, a) => sum + a.amount, 0); }
+export function entrySelectionTotals(state: State, entries: Entry[], scope: EntryScope = {}) {
+  const totals = { income: 0, expenses: 0, refunds: 0, net: 0, cancelled: 0 };
+  for (const e of entries) {
+    const amount = scopedAmount(state, e, scope); if (!amount) continue;
+    if (e.status === 'cancelled') { totals.cancelled++; continue; }
+    if (e.kind === 'income') totals.income += amount;
+    else if (e.kind === 'refund') totals.refunds += amount;
+    else totals.expenses += amount;
+  }
+  totals.net = totals.income + totals.refunds - totals.expenses;
+  return totals;
+}
 export type Entry = {
   id: string; kind: 'income' | 'expense' | 'refund'; description: string; amount: number; plannedAmount?: number;
   date: string; month: string; dueDate?: string; paidDate?: string; status: Status;
@@ -131,6 +150,17 @@ export function thirds(state: State) {
   const lines = state.entries.filter(e => e.kind === 'expense' && e.status !== 'cancelled').flatMap(e => [...new Set(e.allocations.flatMap(a => a.contactId ? [a.contactId] : []))].map(contactId => ({ entry: e, contactId, debt: thirdDebt(state, e.id, contactId), received: receivedFor(state, e.id, contactId) })));
   const available = state.receipts.reduce((s, r) => s + r.allocations.reduce((t, a) => t + availableReceipt(state, r, a), 0), 0);
   return { lines, outstanding: lines.reduce((s, l) => s + Math.max(0, l.debt - l.received), 0), balance: available, returnable: lines.reduce((s, l) => s + Math.max(0, l.received - l.debt), 0) };
+}
+export function thirdSelection(state: State, month: string, contactId = '') {
+  const matches = (entryId: string, person: string) => (!contactId || person === contactId) && state.entries.some(e => e.id === entryId && e.month === month);
+  const lines = thirds(state).lines.filter(l => matches(l.entry.id, l.contactId));
+  const receipts = state.receipts.flatMap(receipt => receipt.allocations.filter(a => matches(a.entryId, a.contactId)).map(allocation => ({ receipt, allocation })));
+  const returns = state.returns.filter(r => matches(r.entryId, r.contactId));
+  return { lines, receipts, returns,
+    debt: lines.reduce((sum, l) => sum + l.debt, 0), received: lines.reduce((sum, l) => sum + l.received, 0),
+    outstanding: lines.reduce((sum, l) => sum + Math.max(0, l.debt - l.received), 0),
+    balance: receipts.reduce((sum, r) => sum + availableReceipt(state, r.receipt, r.allocation), 0),
+    returnable: lines.reduce((sum, l) => sum + Math.max(0, l.received - l.debt), 0) };
 }
 export type Invoice = { card: Card; month: string; dueDate: string; entries: Entry[]; total: number; paid: number; remaining: number; thirdAvailable: number; personal: number; third: number; status: string };
 export function invoice(state: State, cardId: string, month: string): Invoice {
