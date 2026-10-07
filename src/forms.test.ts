@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { EntryForm, ReceiptGuide } from './forms';
-import { Cards, Dashboard, Thirds, type PageProps } from './pages';
+import { Cards, Dashboard, Thirds, Transactions, Reports, type PageProps } from './pages';
 import * as D from './domain';
 import { EntryTable } from './components';
 
@@ -116,6 +116,30 @@ describe('Atalhos de recebimento de terceiros', () => {
 });
 
 describe('Detalhes dos valores pessoais', () => {
+  it('mostra totais em consultas vazias, lançamentos, contas, faturas, relatórios e detalhes', () => {
+    const { state } = setup(); const noop = () => {};
+    const props: PageProps = { state, members: [], month: '2026-10', writable: false, openEntry: noop, newEntry: noop, editEntity: noop, openPayment: noop, openReceipt: noop, openReturn: noop, openBudget: noop, showEntries: noop, commit: async () => {} };
+    for (const page of [Transactions, Cards, Thirds, Reports]) {
+      const html = renderToStaticMarkup(createElement(page, props));
+      expect(html).toContain('Totais da seleção'); expect(html).toContain(D.money(0));
+    }
+    const bills = renderToStaticMarkup(createElement(Transactions, { ...props, bills: true }));
+    expect(bills).toContain('Despesas da seleção');
+    const modal = renderToStaticMarkup(createElement(EntryTable, { state, entries: [], members: [], onSelect: noop, showTotals: true }));
+    expect(modal).toContain('Resultado da seleção');
+    expect(renderToStaticMarkup(createElement(Transactions, props))).toContain('Todos os responsáveis');
+  });
+  it('mostra somente a compra do mês em valores a receber, inclusive após trocar o mês', () => {
+    const { state, template } = setup(); const contactId = D.id(); const noop = () => {};
+    state.contacts.push({ id: contactId, name: 'Pessoa fictícia', color: '#123456', archived: false });
+    state.entries = [ { ...template, id: D.id(), description: 'Somente outubro', allocations: [{ categoryId: state.categories[0].id, contactId, amount: template.amount }] }, { ...template, id: D.id(), month: '2026-11', description: 'Somente novembro', allocations: [{ categoryId: state.categories[0].id, contactId, amount: template.amount }] } ];
+    const props: PageProps = { state, members: [], month: '2026-10', writable: false, openEntry: noop, newEntry: noop, editEntity: noop, openPayment: noop, openReceipt: noop, openReturn: noop, openBudget: noop, showEntries: noop, commit: async () => {} };
+    const october = renderToStaticMarkup(createElement(Thirds, props));
+    expect(october).toContain('Somente outubro'); expect(october).not.toContain('Somente novembro');
+    const november = renderToStaticMarkup(createElement(Thirds, { ...props, month: '2026-11' }));
+    expect(november).toContain('Somente novembro'); expect(november).not.toContain('Somente outubro');
+    expect(october).toContain('mês da compra/parcela');
+  });
   it('exclui compra só de terceiro e mostra apenas a parte pessoal das compras mistas', () => {
     const { state, template } = setup();
     const contactId = D.id();

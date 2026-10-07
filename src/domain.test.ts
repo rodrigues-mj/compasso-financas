@@ -21,6 +21,51 @@ describe('Primeira fatura original e parcela atual', () => {
   });
 });
 const user = '11111111-1111-4111-8111-111111111111';
+describe('Seleção financeira por filtros', () => {
+  it('totaliza somente divisões selecionadas, incluindo pendentes e estornos, sem cancelados', () => {
+    const { s, entry, contact } = fixture();
+    const root = s.categories[0].id; const other = s.categories[1].id; const leaf = D.id();
+    s.categories.push({ id: leaf, name: 'Subcategoria fictícia', kind: 'expense', color: '#123456', archived: false, parentId: root });
+    const expense = entry('expense', 15000, { status: 'pending', paidDate: undefined, allocations: [{ categoryId: root, ownerId: user, amount: 4000 }, { categoryId: leaf, ownerId: user, amount: 3000 }, { categoryId: other, amount: 3000 }, { categoryId: root, contactId: contact.id, amount: 5000 }] });
+    s.entries = [entry('income', 20000), expense, entry('refund', 2000, { originalId: expense.id, allocations: [{ categoryId: root, ownerId: user, amount: 2000 }] }), entry('expense', 90000, { status: 'cancelled' })];
+    expect(D.entrySelectionTotals(s, s.entries, { portion: 'personal' })).toEqual({ income: 20000, expenses: 10000, refunds: 2000, net: 12000, cancelled: 1 });
+    expect(D.entrySelectionTotals(s, s.entries, { portion: 'third' }).expenses).toBe(5000);
+    expect(D.entrySelectionTotals(s, s.entries, { portion: 'all' }).net).toBe(7000);
+    const scope: D.EntryScope = { portion: 'personal', categoryId: root, responsible: `member:${user}` };
+    expect(D.entrySelectionTotals(s, s.entries, scope)).toEqual({ income: 0, expenses: 7000, refunds: 2000, net: -5000, cancelled: 0 });
+    expect(D.scopedAmount(s, expense, { ...scope, categoryId: leaf })).toBe(3000);
+    expect(D.scopedAmount(s, expense, { responsible: `contact:${contact.id}` })).toBe(5000);
+    expect(D.scopedAmount(s, expense, { responsible: 'shared' })).toBe(3000);
+    expect(D.entrySelectionTotals(s, [], scope).net).toBe(0);
+    expect(D.entrySelectionTotals(s, [s.entries[3]], { portion: 'all' }).expenses).toBe(0);
+  });
+  it('restringe terceiros por competência e pessoa, fracionando recebimento distribuído entre meses', () => {
+    const { s, entry, contact, card } = fixture(); const other = D.id();
+    s.contacts.push({ id: other, name: 'Outra pessoa fictícia', color: '#123456', archived: false });
+    const categoryId = s.categories[0].id;
+    const october = entry('expense', 15000, { cardId: card.id, allocations: [{ categoryId, amount: 5000 }, { categoryId, contactId: contact.id, amount: 10000 }] });
+    const november = entry('expense', 10000, { cardId: card.id, month: '2026-11', allocations: [{ categoryId, contactId: contact.id, amount: 10000 }] });
+    const another = entry('expense', 20000, { cardId: card.id, allocations: [{ categoryId, contactId: other, amount: 20000 }] });
+    s.entries = [october, november, another, entry('refund', 12000, { cardId: card.id, originalId: another.id, allocations: [{ categoryId, contactId: other, amount: 12000 }] })];
+    const receiptId = D.id();
+    s.receipts = [{ id: receiptId, date: '2026-09-15', amount: 25000, notes: '', allocations: [{ entryId: october.id, contactId: contact.id, amount: 6000, replacement: false }, { entryId: november.id, contactId: contact.id, amount: 8000, replacement: false }, { entryId: another.id, contactId: other, amount: 11000, replacement: false }] }];
+    s.payments = [{ id: D.id(), date: '2026-10-10', month: '2026-10', cardId: card.id, amount: 3000, uses: [{ receiptId, entryId: october.id, contactId: contact.id, amount: 2000 }] }];
+    s.returns = [{ id: D.id(), date: '2026-11-01', receiptId, entryId: another.id, contactId: other, amount: 1000 }];
+    const before = JSON.stringify(s); const selected = D.thirdSelection(s, '2026-10', contact.id);
+    expect(selected.lines.map(l => l.entry.id)).toEqual([october.id]);
+    expect([selected.debt, selected.received, selected.outstanding, selected.balance, selected.returnable]).toEqual([10000, 6000, 4000, 4000, 0]);
+    expect(selected.receipts.map(r => r.allocation.amount)).toEqual([6000]);
+    expect(D.thirdSelection(s, '2026-11', contact.id).balance).toBe(8000);
+    const allOctober = D.thirdSelection(s, '2026-10');
+    expect([allOctober.debt, allOctober.received, allOctober.outstanding, allOctober.balance, allOctober.returnable]).toEqual([18000, 16000, 4000, 14000, 2000]);
+    expect(allOctober.returns).toHaveLength(1);
+    expect(D.thirdSelection(s, '2027-01').lines).toHaveLength(0);
+    expect(D.thirdSelection(s, '2027-01').balance).toBe(0);
+    expect(D.thirds(s).balance).toBe(22000);
+    expect(D.monthly(s, '2026-10').spent).toBe(5000);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+});
 describe('Parcelamento sem cartão', () => {
   it('cadastra de 16/48 até 48/48, sem histórico anterior, com competência no vencimento e persistência JSON', () => {
     const { s, entry } = fixture();

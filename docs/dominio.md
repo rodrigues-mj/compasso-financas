@@ -109,6 +109,14 @@ Uma compra de 15.000, com 10.000 pessoais e 5.000 de terceiro, consome 10.000 do
 
 ## Indicadores e relatórios
 
+### Escopo e totais das consultas
+
+`EntryScope = { portion?, categoryId?, responsible? }` é uma projeção não persistida. `scopedAllocations(state, entry, scope)` intersecta parte, categoria (a própria ou a raiz) e responsável (`member:UUID`, `contact:UUID` ou `shared`). `scopedAmount` soma somente essas divisões em centavos. Não altera o lançamento nem o dinheiro de terceiros.
+
+`entrySelectionTotals(state, entries, scope)` recebe os registros já filtrados por período/descrição/tipo/banco/cartão/status e retorna `income`, `expenses`, `refunds`, `net` e `cancelled`. Ignora divisões fora do escopo, inclui despesas pendentes, exclui cancelados dos valores e calcula `net = income + refunds - expenses`. Esse resultado é um subtotal da consulta, não saldo real nem nova movimentação.
+
+`thirdSelection(state, month, contactId='')` deriva linhas de `thirds`, recebimentos por divisão e devoluções vinculados a entradas com `Entry.month` escolhido, limitando pessoa quando informada. Retorna `lines`, `receipts: {receipt, allocation}[]`, `returns`, `debt`, `received` (líquido de devoluções), `outstanding`, `balance` e `returnable`. Saldo soma `availableReceipt` de cada divisão escolhida, descontando usos/devoluções; a data do recebimento não restringe a consulta por competência. Não conta o recebimento inteiro quando parte pertence a outro mês/pessoa. `thirds(state)` continua global, usado no painel e regras de recebimento/pagamento.
+
 ### Parcelas mensais sem cartão
 
 `billInstallmentSchedule(amount, count, start, dueDate)` recebe o valor **de cada parcela** em centavos, total original (1–120), parcela inicial e próximo vencimento. Retorna somente `start..count`, com o mesmo valor e vencimentos mensais ancorados no dia inicial (31 → último dia de fevereiro → 31 de março). Não divide um preço total.
